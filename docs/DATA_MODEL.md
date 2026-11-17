@@ -10,7 +10,7 @@ Libido dynamics as three streams, plus the cycle:
 | --- | --- | --- |
 | Partnered activity | `events` with `kind = 'sex'` | count per week / month |
 | Other activity | `events` with `kind` in `masturbation`, `dream`, `fantasy` | count per week / month, split by kind |
-| Desire | `daily_checkins.desire` (1–10, once a day) | line with a moving average |
+| Desire | `daily_checkins.desire` (1–5, once a day) | line with a moving average |
 | Bleeding | `daily_checkins.flow` | bleeding and spotting days per month, bleeding episodes and cycles, heat map |
 | Pills | `pill_log` | taken / late / missed |
 
@@ -60,7 +60,7 @@ Each part is optional: a day may have only desire, only flow, or both.
 | Column | Type | Notes |
 | --- | --- | --- |
 | `date` | TEXT PK | local date `YYYY-MM-DD` |
-| `desire` | INTEGER NULL | 1–10 |
+| `desire` | INTEGER NULL | 1–5 (T19; until migration 2 it was 1–10, earlier values were halved and rounded up) |
 | `flow` | TEXT NULL | `none` · `spotting` · `light` · `medium` · `heavy` · `unspecified` (only from the Health import); NULL — not recorded, which is different from `none` |
 | `flow_source` | TEXT NULL | `tide` · `health` — where the flow came from |
 | `note` | TEXT NULL | |
@@ -134,7 +134,7 @@ Computed, not stored (Tide only shows numbers and flags, gives no medical advice
 
 ### `settings` — key/value
 
-Reminder time, theme, lock timeout and similar. Schema version lives in `PRAGMA user_version` (migrations as in Recallo).
+Reminder time, theme, lock timeout and similar. Schema version lives in `PRAGMA user_version` (migrations as in Recallo). Migration 1 creates the phase 2 tables; migration 2 rebuilds `daily_checkins` for the 1–5 desire scale (T19).
 
 ## Storage and encryption (proposal)
 

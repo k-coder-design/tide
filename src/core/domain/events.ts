@@ -1,7 +1,7 @@
 import type { EventInput, EventKind, Initiator, Protection, TideEvent } from '../../shared/types'
 import type { Context } from './context'
 import { DomainError } from './errors'
-import { checkDate, checkId, checkNote, checkOneOf, checkRating, checkTime } from './validation'
+import { checkDate, checkId, checkNote, checkOneOf, checkRating, checkTime, SATISFACTION_MAX } from './validation'
 
 const KINDS: readonly EventKind[] = ['sex', 'masturbation', 'dream', 'fantasy']
 const INITIATORS: readonly Initiator[] = ['me', 'partner', 'mutual']
@@ -117,7 +117,7 @@ export class EventService {
       kind,
       occurredOn: checkDate(input.occurredOn),
       occurredTime: checkTime(input.occurredTime),
-      satisfaction: rated ? checkRating(input.satisfaction, 'Satisfaction') : null,
+      satisfaction: rated ? checkRating(input.satisfaction, 'Satisfaction', SATISFACTION_MAX) : null,
       orgasm: rated ? (input.orgasm ?? null) : null,
       note: checkNote(input.note),
       partnerId,

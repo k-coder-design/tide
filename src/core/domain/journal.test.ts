@@ -25,9 +25,9 @@ function seed() {
   events.create(entry('fantasy', '2026-11-16', '15:40'))
   events.create(entry('dream', '2026-11-15'))
   events.create(entry('masturbation', '2026-11-13', '22:40'))
-  checkins.setDesire('2026-11-17', 7)
-  checkins.setDesire('2026-11-16', 6)
-  checkins.setDesire('2026-11-14', 5)
+  checkins.setDesire('2026-11-17', 4)
+  checkins.setDesire('2026-11-16', 3)
+  checkins.setDesire('2026-11-14', 2)
   return { ctx, journal: new JournalService(ctx), checkins }
 }
 
@@ -36,7 +36,7 @@ describe('journal', () => {
     const { journal } = seed()
     const page = journal.days({ before: null, limit: 10, filter: 'all' })
     expect(page.days.map((d) => d.date)).toEqual(['2026-11-17', '2026-11-16', '2026-11-15', '2026-11-14', '2026-11-13'])
-    expect(page.days[1]?.desire).toBe(6)
+    expect(page.days[1]?.desire).toBe(3)
     expect(page.days[1]?.events.map((e) => e.kind)).toEqual(['sex', 'fantasy'])
     expect(page.nextBefore).toBeNull()
   })
@@ -72,14 +72,25 @@ describe('journal', () => {
     expect(journal.days({ before: null, limit: 10, filter: 'checkins' }).days.map((d) => d.date)).not.toContain('2026-11-14')
   })
 
+  it('desire is rated from 1 to 5; satisfaction stays 1 to 10', () => {
+    const { checkins, ctx } = seed()
+    checkins.setDesire('2026-11-10', 5)
+    expect(checkins.desire('2026-11-10')).toBe(5)
+    expect(() => checkins.setDesire('2026-11-10', 6)).toThrow('Desire must be a whole number from 1 to 5')
+    expect(() => checkins.setDesire('2026-11-10', 0)).toThrow('Desire must be a whole number from 1 to 5')
+    const events = new EventService(ctx)
+    expect(events.create({ ...entry('sex', '2026-11-10'), satisfaction: 10 }).satisfaction).toBe(10)
+    expect(() => events.create({ ...entry('sex', '2026-11-10'), satisfaction: 11 })).toThrow('from 1 to 10')
+  })
+
   it('month cells count partnered and other activity', () => {
     const { journal } = seed()
     expect(journal.month('2026-11')).toEqual([
       { date: '2026-11-13', partnered: 0, other: 1, desire: null },
-      { date: '2026-11-14', partnered: 0, other: 0, desire: 5 },
+      { date: '2026-11-14', partnered: 0, other: 0, desire: 2 },
       { date: '2026-11-15', partnered: 0, other: 1, desire: null },
-      { date: '2026-11-16', partnered: 1, other: 1, desire: 6 },
-      { date: '2026-11-17', partnered: 0, other: 0, desire: 7 }
+      { date: '2026-11-16', partnered: 1, other: 1, desire: 3 },
+      { date: '2026-11-17', partnered: 0, other: 0, desire: 4 }
     ])
     expect(journal.month('2026-10')).toEqual([])
   })
@@ -98,8 +109,8 @@ describe('journal', () => {
     ])
     expect(week.partnered).toBe(1)
     expect(week.other).toBe(3)
-    expect(week.desireAverage).toBe(6)
-    expect(week.days[6]).toEqual({ date: '2026-11-17', desire: 7, partnered: 0, other: 0 })
+    expect(week.desireAverage).toBe(3)
+    expect(week.days[6]).toEqual({ date: '2026-11-17', desire: 4, partnered: 0, other: 0 })
   })
 
   it('one day returns everything recorded on it, or an empty day', () => {

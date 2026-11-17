@@ -1,8 +1,8 @@
 import type { Context } from './context'
-import { checkDate, checkRating } from './validation'
+import { checkDate, checkRating, DESIRE_MAX } from './validation'
 
 /**
- * The daily check-in (T4): at most one row per day. Phase 2 records desire; flow and symptoms
+ * The daily check-in (T4): at most one row per day; desire is rated 1–5. Phase 2 records desire; flow and symptoms
  * join it in phase 6. A row with nothing left in it is removed.
  */
 export class CheckinService {
@@ -15,7 +15,7 @@ export class CheckinService {
 
   setDesire(date: string, desire: number | null): void {
     const day = checkDate(date)
-    const value = checkRating(desire, 'Desire')
+    const value = checkRating(desire, 'Desire', DESIRE_MAX)
     this.ctx.db.transaction(() => {
       this.ctx.db
         .prepare(

@@ -50,8 +50,28 @@ const MIGRATIONS: string[] = [
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL
   );
+  `,
+  // T4 revised: desire is rated 1–5 instead of 1–10. Earlier ratings are halved, rounding up
+  // (1–2 → 1, 3–4 → 2, … 9–10 → 5). SQLite cannot change a CHECK, so the table is rebuilt.
+  `
+  CREATE TABLE daily_checkins_v2 (
+    date TEXT PRIMARY KEY,
+    desire INTEGER CHECK (desire BETWEEN 1 AND 5),
+    flow TEXT CHECK (flow IN ('none', 'spotting', 'light', 'medium', 'heavy', 'unspecified')),
+    flow_source TEXT CHECK (flow_source IN ('tide', 'health')),
+    note TEXT,
+    updated_at TEXT NOT NULL
+  );
+  INSERT INTO daily_checkins_v2 (date, desire, flow, flow_source, note, updated_at)
+    SELECT date, CASE WHEN desire IS NULL THEN NULL ELSE (desire + 1) / 2 END, flow, flow_source, note, updated_at
+    FROM daily_checkins;
+  DROP TABLE daily_checkins;
+  ALTER TABLE daily_checkins_v2 RENAME TO daily_checkins;
   `
 ]
+
+/** For the migration tests only. */
+export const MIGRATION_SQL: readonly string[] = MIGRATIONS
 
 export function migrate(db: Db): void {
   const current = db.pragma('user_version', { simple: true }) as number

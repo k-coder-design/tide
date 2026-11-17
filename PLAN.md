@@ -1,6 +1,6 @@
 # Tide — plan
 
-A private iPhone app for tracking libido dynamics: partnered sex, other sexual activity (masturbation, sexual dreams, fantasies) and daily desire (1–10). For personal use only, data stays on the device.
+A private iPhone app for tracking libido dynamics: partnered sex, other sexual activity (masturbation, sexual dreams, fantasies) and daily desire (1–5). For personal use only, data stays on the device.
 
 ## Decisions
 
@@ -9,7 +9,7 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 | T1 | **Stack as Recallo: Mobile** — a Home Screen web app (React 19, Vite, TypeScript, SQLite WebAssembly in a Worker), not native Swift: with a free Apple ID an Xcode app stops opening after 7 days (Recallo D57). Design is Tide's own. | 17.11.2026 |
 | T2 | **For personal use only**: no onboarding, no App Store. | 17.11.2026 |
 | T3 | **Data only on the device**, encrypted; moving to a new phone — by an encrypted backup file. No server, no MCP. | 17.11.2026 |
-| T4 | **Desire = daily rating 1–10**; notable fantasies can be logged as separate events. | 17.11.2026 |
+| T4 | **Desire = daily rating 1–5** (changed from 1–10 on 17.11.2026, see T19); notable fantasies can be logged as separate events. | 17.11.2026 |
 | T5 | Sex details (all optional): partner label, satisfaction 1–10 (also for masturbation), orgasm, initiator, protection (none / condom / other). | 17.11.2026 |
 | T6 | Factors: medications; the menstrual cycle — see T11. A medication marked as a contraceptive is shown automatically on sex events within its course — computed, not stored per event. | 17.11.2026 |
 | T7 | Privacy: **optional app lock** — PIN, with Face ID on top if wanted; off by default, turned on and off in Settings (turning it off asks for the PIN or Face ID first). The database is always encrypted on the device, lock or not. Neutral icon and name, neutral reminders. | 17.11.2026 |
@@ -24,6 +24,7 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 | T16 | **Target screen — iPhone 13 Pro Max, 428×926 pt.** Main screens (Today, Journal, Insights, Settings with the lock off) fit on one screen without scrolling; dense layouts: one-row pill card, 4 quick-log tiles in a row, inline segment rows in the entry form, the calendar/list switch in the title row, period picker inside the chart card, bleeding days by month and by day as one card with a switch. Long lists (all bleeding episodes, doses) scroll inside their card. | 17.11.2026 |
 | T17 | **Encrypted storage as built (phase 2)**: the database lives in memory; after every change its image is encrypted (AES-GCM, random 256-bit data key) and written to one of two files in the phone's private storage in turn. Each file carries a save number that is authenticated with the data, so a save cut off mid-write is detected and the previous file is used. If saved data cannot be decrypted (key missing or wrong), Tide stops with an error and never starts empty over it. Screens show only what works: the pill and bleeding blocks on Today, Insights, lock, backups and Health import arrive with their phases. | 17.11.2026 |
 | T18 | **Bleeding starts a cycle, spotting does not.** Flow light, medium or heavy (and a Health flow record without a level) is bleeding: it forms episodes, and the first bleeding day of an episode starts a new cycle. Spotting is recorded and counted separately (spotting days per month, spotting days around an episode, spotting between episodes) and never starts an episode or a cycle; spotting before or after bleeding does not change an episode's start or length. The user tells them apart when choosing the flow; Tide does not guess. | 17.11.2026 |
+| T19 | **Desire is rated 1–5, satisfaction stays 1–10.** A coarser daily scale is quicker to answer and steadier from day to day. Ratings already entered on the 1–10 scale were converted by schema migration 2: halved and rounded up (1–2 → 1, 3–4 → 2, 5–6 → 3, 7–8 → 4, 9–10 → 5). | 17.11.2026 |
 
 ## Web app limits on iPhone (affect phases 3 and 7)
 
@@ -36,7 +37,7 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 
 0. **Setup** ✅ — Recallo studied, project created (builds, runs at iPhone size), data model approved ([docs/DATA_MODEL.md](docs/DATA_MODEL.md)).
 1. **Design** ✅ — style A "Calm Water" (T10), design system (colors, type, components, light/dark), app icon C, and clickable mockups of all key screens at 428×926 (T16): Lock, Today, New entry, Journal (List / Calendar), Entry details, Insights (Libido / Cycle), Pill log, Settings. Approved 17.11.2026 on the canvas https://claude.ai/artifact/5HgMMc8EcbFnmyiJEsLoWc.
-2. **Core: the journal** ✅ (built 17.11.2026, v0.2.0) — encrypted local database (T17), quick logging from Today, daily desire with the week at a glance, the entry form and entry details (edit, delete), the journal as a list by day with filters and as a month calendar, desire for past days, partner labels (add, rename, archive), light / dark / system appearance, offline mode (service worker), app icon C. Checked in a desktop browser at 428×926: entries survive a reload, storage holds only encrypted files. Published 17.11.2026 at https://k-coder-design.github.io/tide/ (GitHub Pages, every push to `main`; install steps in README). Not checked yet: offline mode and the app on the iPhone itself.
+2. **Core: the journal** ✅ (built 17.11.2026, v0.2.1) — encrypted local database (T17), quick logging from Today, daily desire with the week at a glance, the entry form and entry details (edit, delete), the journal as a list by day with filters and as a month calendar, desire for past days, partner labels (add, rename, archive), light / dark / system appearance, desire on a 1–5 scale (T19), offline mode (service worker), app icon C. Checked in a desktop browser at 428×926: entries survive a reload, storage holds only encrypted files. Published 17.11.2026 at https://k-coder-design.github.io/tide/ (GitHub Pages, every push to `main`; install steps in README). Not checked yet: offline mode and the app on the iPhone itself.
 3. **Privacy** — optional app lock (PIN / Face ID, auto-lock) switched on and off in Settings, blur in the app switcher, neutral icon and name.
 4. **Backups and moving** — encrypted backup file with a password, saved through the Share sheet (T14), restore (replace / merge), backup reminder, delete all data; one-time import of menstrual history from an Apple Health export (T12) — if it fails, the cycle section is removed (T11). ✅ when a backup from the old phone fully restores on a new one.
 5. **Analytics** — frequency by week / month for both streams, desire with a moving average, heat-map calendar, period comparison.

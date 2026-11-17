@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SATISFACTION_MAX } from '../../shared/scales'
 import type { EventInput, EventKind, Partner, TideEvent } from '../../shared/types'
 import { Icon } from '../components/Icon'
 import { RatingRow, Segmented, Sheet, useLoad } from '../components/controls'
@@ -186,6 +187,7 @@ export function EntryForm({
             </div>
             <RatingRow
               label="Satisfaction"
+              max={SATISFACTION_MAX}
               value={form.satisfaction}
               accent={info.partnered ? 'terracotta' : 'teal'}
               onChange={(satisfaction) => set({ satisfaction })}

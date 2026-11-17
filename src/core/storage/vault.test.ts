@@ -90,11 +90,11 @@ describe('encrypted storage', () => {
     const keys = memoryKeys()
     const memory = openTestMemory()
     const ctx = { ...openTestContext(), db: memory.db }
-    new CheckinService(ctx).setDesire('2026-11-17', 7)
+    new CheckinService(ctx).setDesire('2026-11-17', 4)
     const { vault } = await Vault.open(slots, keys)
     await vault.save(memory.serialize())
     const { image } = await Vault.open(slots, keys)
     const restored = openTestMemory(image!)
-    expect(new CheckinService({ ...ctx, db: restored.db }).desire('2026-11-17')).toBe(7)
+    expect(new CheckinService({ ...ctx, db: restored.db }).desire('2026-11-17')).toBe(4)
   })
 })

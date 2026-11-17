@@ -1,3 +1,4 @@
+import { DESIRE_MAX } from '../../shared/scales'
 import type { EventKind } from '../../shared/types'
 import { KindBadge, RatingRow, useLoad } from '../components/controls'
 import { api } from '../lib/client'
@@ -30,9 +31,9 @@ export function TodayScreen({ version, navigate, onChanged }: { version: number;
       <section className="card">
         <div className="card-head">
           <h2>Desire</h2>
-          <span className="muted small">1 low · 10 high</span>
+          <span className="muted small">1 low · 5 high</span>
         </div>
-        <RatingRow label="Desire" value={data?.desire ?? null} onChange={(n) => void setDesire(n)} />
+        <RatingRow label="Desire" max={DESIRE_MAX} value={data?.desire ?? null} onChange={(n) => void setDesire(n)} />
       </section>
 
       <section className="log-grid" aria-label="Log an entry">
@@ -61,7 +62,7 @@ export function TodayScreen({ version, navigate, onChanged }: { version: number;
           {(week?.days ?? []).map((day) => (
             <div key={day.date} className={`week-day ${day.date === today ? 'current' : ''}`}>
               <span className="week-value">{day.desire ?? ''}</span>
-              <span className="week-bar" style={{ height: day.desire === null ? 3 : day.desire * 6 }} />
+              <span className="week-bar" style={{ height: day.desire === null ? 3 : day.desire * 12 }} />
               <span className="week-dots">
                 <span className={day.partnered > 0 ? 'dot terracotta' : 'dot'} />
                 <span className={day.other > 0 ? 'dot teal' : 'dot'} />

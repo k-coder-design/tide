@@ -1,3 +1,4 @@
+export { DESIRE_MAX, SATISFACTION_MAX } from '../../shared/scales'
 import { DomainError } from './errors'
 
 const DATE = /^(\d{4})-(\d{2})-(\d{2})$/
@@ -35,11 +36,11 @@ export function checkTime(value: unknown): string | null {
   return value
 }
 
-/** A whole number from 1 to 10, or null. */
-export function checkRating(value: unknown, what: string): number | null {
+/** A whole number from 1 to `max`, or null. */
+export function checkRating(value: unknown, what: string, max: number): number | null {
   if (value === null || value === undefined) return null
-  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > 10) {
-    return invalid(`${what} must be a whole number from 1 to 10`)
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < 1 || value > max) {
+    return invalid(`${what} must be a whole number from 1 to ${max}`)
   }
   return value
 }

@@ -378,6 +378,10 @@ h2 {
   font-weight: 700;
 }
 
+.rating.wide {
+  gap: 8px;
+}
+
 .rating.teal button.on {
   background: var(--teal);
   border-color: var(--teal);

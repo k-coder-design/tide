@@ -37,27 +37,29 @@ export function Segmented<T extends string>({
   )
 }
 
-/** 1–10 buttons. Tapping the chosen number again clears it. */
+/** Buttons from 1 to `max` (desire 1–5, satisfaction 1–10). Tapping the chosen number again clears it. */
 export function RatingRow({
   value,
   onChange,
   label,
+  max,
   accent = 'teal'
 }: {
   value: number | null
   onChange: (value: number | null) => void
   label: string
+  max: number
   accent?: 'teal' | 'terracotta'
 }) {
   return (
-    <div className={`rating ${accent}`} role="radiogroup" aria-label={label}>
-      {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+    <div className={`rating ${accent}${max <= 5 ? ' wide' : ''}`} role="radiogroup" aria-label={label}>
+      {Array.from({ length: max }, (_, i) => i + 1).map((n) => (
         <button
           key={n}
           type="button"
           role="radio"
           aria-checked={value === n}
-          aria-label={`${label} ${n} of 10`}
+          aria-label={`${label} ${n} of ${max}`}
           className={value === n ? 'on' : ''}
           onClick={() => onChange(value === n ? null : n)}
         >
