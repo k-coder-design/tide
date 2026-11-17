@@ -1,5 +1,7 @@
 import type {
   EventInput,
+  LockProof,
+  LockStatus,
   JournalDay,
   JournalFilter,
   JournalPage,
@@ -68,3 +70,40 @@ const METHODS: ReadonlySet<string> = new Set<ApiMethod>([
 ])
 
 export const isApiMethod = (value: unknown): value is ApiMethod => typeof value === 'string' && METHODS.has(value)
+
+type Bytes = Uint8Array<ArrayBuffer>
+
+/** The app lock (T21): handled by the storage session in the Worker, answered even while Tide is locked. */
+export interface LockContract {
+  'lock.status'(): LockStatus
+  'lock.unlockWithPin'(pin: string): LockStatus
+  'lock.unlockWithFaceId'(secret: Bytes): LockStatus
+  'lock.lock'(): LockStatus
+  'lock.enable'(pin: string): LockStatus
+  'lock.disable'(proof: LockProof): LockStatus
+  'lock.changePin'(current: string, next: string): LockStatus
+  'lock.enableFaceId'(credentialId: Bytes, prfSalt: Bytes, secret: Bytes): LockStatus
+  'lock.disableFaceId'(): LockStatus
+  'lock.setAutoLock'(minutes: LockStatus['autoLock']): LockStatus
+}
+
+export type LockMethod = keyof LockContract
+
+/** Everything the client can call. */
+export type ClientContract = ApiContract & LockContract
+export type ClientMethod = keyof ClientContract
+
+const LOCK_METHODS: ReadonlySet<string> = new Set<LockMethod>([
+  'lock.status',
+  'lock.unlockWithPin',
+  'lock.unlockWithFaceId',
+  'lock.lock',
+  'lock.enable',
+  'lock.disable',
+  'lock.changePin',
+  'lock.enableFaceId',
+  'lock.disableFaceId',
+  'lock.setAutoLock'
+])
+
+export const isLockMethod = (value: unknown): value is LockMethod => typeof value === 'string' && LOCK_METHODS.has(value)

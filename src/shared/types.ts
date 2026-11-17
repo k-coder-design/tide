@@ -83,7 +83,8 @@ export interface Settings {
   theme: Theme
 }
 
-export type ErrorCode = 'VALIDATION' | 'NOT_FOUND' | 'STORAGE' | 'INTERNAL'
+/** LOCKED — Tide is locked; WRONG_PIN — the PIN did not match; WAIT — too many wrong PINs, try later. */
+export type ErrorCode = 'VALIDATION' | 'NOT_FOUND' | 'STORAGE' | 'INTERNAL' | 'LOCKED' | 'WRONG_PIN' | 'WAIT'
 
 export interface AppError {
   code: ErrorCode
@@ -91,3 +92,17 @@ export interface AppError {
 }
 
 export type Result<T> = { ok: true; data: T } | { ok: false; error: AppError }
+
+/** The app lock as the interface sees it (T7, T21). Minutes of auto-lock: 0 — when Tide leaves the screen. */
+export interface LockStatus {
+  enabled: boolean
+  locked: boolean
+  autoLock: 0 | 1 | 5 | 15
+  /** The passkey Face ID unlocks with, and its PRF input; null when Face ID is off. */
+  faceId: { credentialId: Uint8Array<ArrayBuffer>; prfSalt: Uint8Array<ArrayBuffer> } | null
+  /** When the next PIN try is allowed (ms since 1970), after too many wrong ones. */
+  retryAt: number | null
+}
+
+/** Proof that the person at the phone may change the lock: the PIN or the Face ID secret. */
+export type LockProof = { pin: string } | { secret: Uint8Array<ArrayBuffer> }

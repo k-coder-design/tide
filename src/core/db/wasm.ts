@@ -72,6 +72,8 @@ export interface MemoryDatabase {
   db: Db
   /** The whole database as bytes — to encrypt and store after each write. */
   serialize(): Uint8Array
+  /** Frees the database and its memory (when Tide locks). */
+  close(): void
 }
 
 export function openMemoryDatabase(sqlite3: Sqlite3Static, image?: Uint8Array): MemoryDatabase {
@@ -85,7 +87,7 @@ export function openMemoryDatabase(sqlite3: Sqlite3Static, image?: Uint8Array): 
   const db = wrapWasmDatabase(sqlite3, raw)
   db.pragma('foreign_keys = ON')
   migrate(db)
-  return { db, serialize: () => sqlite3.capi.sqlite3_js_db_export(raw) }
+  return { db, serialize: () => sqlite3.capi.sqlite3_js_db_export(raw), close: () => raw.close() }
 }
 
 class WasmStatement implements Statement {

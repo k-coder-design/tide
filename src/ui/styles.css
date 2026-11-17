@@ -1135,3 +1135,185 @@ h2 {
   color: var(--on-accent);
   font-weight: 800;
 }
+
+/* ---------- App lock (T21) ---------- */
+
+.lock-screen {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: calc(env(safe-area-inset-top) + 72px) 24px calc(env(safe-area-inset-bottom) + 24px);
+}
+
+.lock-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  background: #0e1719;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lock-title {
+  text-align: center;
+  min-height: 64px;
+}
+
+.lock-title h1 {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.lock-title p {
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+.pinpad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+}
+
+.pin-dots {
+  display: flex;
+  gap: 16px;
+}
+
+.pin-dots span {
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  border: 1.5px solid var(--muted);
+  box-sizing: border-box;
+}
+
+.pin-dots span.on {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.pin-keys {
+  display: grid;
+  grid-template-columns: repeat(3, 78px);
+  gap: 16px 30px;
+}
+
+.pin-key {
+  width: 78px;
+  height: 78px;
+  border-radius: 39px;
+  border: 0;
+  padding: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pin-key:active:not(:disabled) {
+  background: var(--segment);
+}
+
+.pin-key.plain {
+  background: transparent;
+}
+
+.pin-key:disabled {
+  opacity: 0.45;
+}
+
+.pin-step {
+  align-items: center;
+  text-align: center;
+  padding-top: 24px;
+  gap: 8px;
+}
+
+.pin-step .pinpad {
+  margin-top: 16px;
+}
+
+.pin-prompt {
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.sheet-header-spacer {
+  width: 52px;
+}
+
+.round-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.switch {
+  position: relative;
+  width: 51px;
+  height: 31px;
+  border-radius: 16px;
+  border: 0;
+  padding: 0;
+  flex-shrink: 0;
+  background: var(--segment);
+  transition: background 0.15s ease-out;
+}
+
+.switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 27px;
+  height: 27px;
+  border-radius: 14px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  transition: transform 0.15s ease-out;
+}
+
+.switch.on {
+  background: var(--teal);
+}
+
+.switch.on::after {
+  transform: translateX(20px);
+}
+
+.switch:disabled {
+  opacity: 0.5;
+}
+
+.row-check {
+  color: var(--teal);
+  font-weight: 800;
+}
+
+/* In the app switcher or behind a system sheet: only the icon, never the journal. */
+html.covered body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235FB3BC' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 13c2.5 0 2.5-3 5-3s2.5 3 5 3 2.5-3 5-3 2.5 3 5 3'/%3E%3Ccircle cx='18' cy='6' r='1.6' fill='%23E8987E' stroke='none'/%3E%3C/svg%3E")
+    center / 72px no-repeat;
+}

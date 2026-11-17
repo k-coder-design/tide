@@ -1,5 +1,6 @@
 import { DESIRE_MAX } from '../../shared/scales'
 import type { EventKind } from '../../shared/types'
+import { Icon } from '../components/Icon'
 import { KindBadge, RatingRow, useLoad } from '../components/controls'
 import { api } from '../lib/client'
 import { longDate, today as todayKey, weekdayLetter } from '../lib/dates'
@@ -7,7 +8,18 @@ import { KINDS } from '../lib/entries'
 import type { Navigate } from '../navigation'
 
 /** Today (screen 2 on the canvas): the day's desire, quick logging, the week at a glance. */
-export function TodayScreen({ version, navigate, onChanged }: { version: number; navigate: Navigate; onChanged: () => void }) {
+export function TodayScreen({
+  version,
+  navigate,
+  onChanged,
+  onLock
+}: {
+  version: number
+  navigate: Navigate
+  onChanged: () => void
+  /** Shown as the lock button when App lock is on. */
+  onLock?: () => void
+}) {
   const today = todayKey()
   const { data, error } = useLoad(() => api('today.summary', today), [today, version])
 
@@ -25,6 +37,11 @@ export function TodayScreen({ version, navigate, onChanged }: { version: number;
           <p className="caption">{longDate(today)}</p>
           <h1>Today</h1>
         </div>
+        {onLock && (
+          <button type="button" className="round-button" aria-label="Lock Tide" onClick={onLock}>
+            <Icon name="lock" size={18} />
+          </button>
+        )}
       </header>
       {error && <p className="error-text">{error}</p>}
 

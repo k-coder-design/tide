@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import type { Partner, Settings, Theme } from '../../shared/types'
+import type { LockStatus, Partner, Settings, Theme } from '../../shared/types'
 import { Icon } from '../components/Icon'
 import { Segmented, Sheet, useLoad } from '../components/controls'
 import { api } from '../lib/client'
+import { PrivacySettings } from './PrivacySettings'
 
 const THEMES: ReadonlyArray<{ value: Theme; label: string }> = [
   { value: 'system', label: 'System' },
@@ -10,8 +11,18 @@ const THEMES: ReadonlyArray<{ value: Theme; label: string }> = [
   { value: 'dark', label: 'Dark' }
 ]
 
-/** Settings (screen 9) — the parts that work in this version: partner labels and appearance. */
-export function SettingsScreen({ settings, onSettings }: { settings: Settings; onSettings: (settings: Settings) => void }) {
+/** Settings (screen 9) — the parts that work in this version: privacy, partner labels and appearance. */
+export function SettingsScreen({
+  settings,
+  onSettings,
+  lock,
+  onLockStatus
+}: {
+  settings: Settings
+  onSettings: (settings: Settings) => void
+  lock: LockStatus
+  onLockStatus: (status: LockStatus) => void
+}) {
   const [version, setVersion] = useState(0)
   const { data: partners } = useLoad(() => api('partners.list', true), [version])
   const [editing, setEditing] = useState<Partner | 'new' | null>(null)
@@ -21,6 +32,8 @@ export function SettingsScreen({ settings, onSettings }: { settings: Settings; o
       <header className="screen-header">
         <h1>Settings</h1>
       </header>
+
+      <PrivacySettings status={lock} onStatus={onLockStatus} />
 
       <section className="group">
         <h2 className="label">Partner labels</h2>
@@ -53,7 +66,7 @@ export function SettingsScreen({ settings, onSettings }: { settings: Settings; o
       </section>
 
       <p className="footnote">
-        Your journal stays on this iPhone and is stored encrypted. Nothing is sent anywhere. Deleting Tide from the Home Screen deletes the
+        Your journal stays on this iPhone and is stored encrypted. Nothing is sent anywhere. With App lock on, it opens only with your PIN or Face ID. Deleting Tide from the Home Screen deletes the
         journal — backups arrive in a coming update.
       </p>
 

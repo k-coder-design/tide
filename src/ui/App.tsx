@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useState } from 'react'
 import { rememberTab, tabAfterUpdate } from '../offline'
-import type { Settings } from '../shared/types'
+import type { LockStatus, Settings } from '../shared/types'
 import { Icon, type IconName } from './components/Icon'
 import { useLoad } from './components/controls'
-import { api } from './lib/client'
+import { api, onLocked } from './lib/client'
+import { faceIdInProgress } from './lib/faceId'
 import type { Overlay, Tab } from './navigation'
 import { DesireSheet } from './screens/DesireSheet'
 import { EntryDetail } from './screens/EntryDetail'
 import { EntryForm } from './screens/EntryForm'
 import { InsightsScreen } from './screens/InsightsScreen'
 import { JournalScreen } from './screens/JournalScreen'
+import { LockScreen } from './screens/LockScreen'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { TodayScreen } from './screens/TodayScreen'
 
@@ -27,7 +29,87 @@ function applyTheme(settings: Settings | undefined): void {
   else root.setAttribute('data-theme', settings.theme)
 }
 
+/**
+ * The app shell: the lock screen while Tide is locked (T21), otherwise the journal. Locking unmounts
+ * every screen, so nothing read from the journal stays on screen or in the interface's state.
+ */
 export function App() {
+  const [lock, setLock] = useState<LockStatus>()
+  const [startError, setStartError] = useState<string | null>(null)
+  const refresh = useCallback(
+    () =>
+      api('lock.status').then(setLock, (reason: unknown) => setStartError(reason instanceof Error ? reason.message : 'Something went wrong')),
+    []
+  )
+  useEffect(() => {
+    void refresh()
+    return onLocked(() => void refresh())
+  }, [refresh])
+  const lockNow = useCallback(() => void api('lock.lock').then(setLock), [])
+  useAutoLock(lock, lockNow)
+  usePrivacyCover()
+  useEffect(() => {
+    // Read by the updater (src/offline.ts): with the journal open behind a lock, updates wait until Tide is off screen.
+    document.documentElement.dataset.lock = !lock?.enabled ? 'off' : lock.locked ? 'locked' : 'open'
+  }, [lock])
+
+  if (startError) {
+    return (
+      <main className="fatal">
+        <h1>Tide could not open</h1>
+        <p>{startError}</p>
+      </main>
+    )
+  }
+  if (!lock) return <main className="app loading" aria-busy="true" />
+  if (lock.locked) return <LockScreen status={lock} onUnlocked={setLock} />
+  return <Journal lock={lock} onLock={lockNow} onLockStatus={setLock} />
+}
+
+/** Locks after the chosen time in the background — or at once, when auto-lock is "Immediately". */
+function useAutoLock(lock: LockStatus | undefined, lockNow: () => void): void {
+  const active = Boolean(lock?.enabled && !lock.locked)
+  const minutes = lock?.autoLock ?? 1
+  useEffect(() => {
+    if (!active) return
+    let hiddenAt: number | null = null
+    const onChange = () => {
+      if (faceIdInProgress()) return
+      if (document.visibilityState === 'hidden') {
+        hiddenAt = Date.now()
+        if (minutes === 0) lockNow()
+      } else if (hiddenAt !== null) {
+        if (Date.now() - hiddenAt >= minutes * 60_000) lockNow()
+        hiddenAt = null
+      }
+    }
+    document.addEventListener('visibilitychange', onChange)
+    return () => document.removeEventListener('visibilitychange', onChange)
+  }, [active, minutes, lockNow])
+}
+
+/**
+ * A plain cover while Tide is off screen, so the app switcher snapshot shows only the icon. Not on window blur:
+ * iOS blurs the window for its own pickers, and the cover would hide the form being filled in.
+ */
+function usePrivacyCover(): void {
+  useEffect(() => {
+    const root = document.documentElement
+    const cover = () => !faceIdInProgress() && root.classList.add('covered')
+    const uncover = () => root.classList.remove('covered')
+    const onVisibility = () => (document.visibilityState === 'hidden' ? cover() : uncover())
+    document.addEventListener('visibilitychange', onVisibility)
+    window.addEventListener('pagehide', cover)
+    window.addEventListener('pageshow', uncover)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility)
+      window.removeEventListener('pagehide', cover)
+      window.removeEventListener('pageshow', uncover)
+    }
+  }, [])
+}
+
+function Journal({ lock, onLock, onLockStatus }: { lock: LockStatus; onLock: () => void; onLockStatus: (status: LockStatus) => void }) {
   const [tab, setTab] = useState<Tab>(() => {
     const resumed = tabAfterUpdate()
     return TABS.some((t) => t.tab === resumed) ? (resumed as Tab) : 'today'
@@ -64,10 +146,10 @@ export function App() {
   return (
     <main className="app">
       <div className="tab-content">
-        {tab === 'today' && <TodayScreen version={version} navigate={push} onChanged={changed} />}
+        {tab === 'today' && <TodayScreen version={version} navigate={push} onChanged={changed} onLock={lock.enabled ? onLock : undefined} />}
         {tab === 'journal' && <JournalScreen version={version} navigate={push} />}
         {tab === 'insights' && <InsightsScreen />}
-        {tab === 'settings' && <SettingsScreen settings={settings} onSettings={setSettings} />}
+        {tab === 'settings' && <SettingsScreen settings={settings} onSettings={setSettings} lock={lock} onLockStatus={onLockStatus} />}
       </div>
       <nav className="tab-bar" aria-label="Main">
         {TABS.map((t) => (

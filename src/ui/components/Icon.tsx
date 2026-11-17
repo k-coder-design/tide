@@ -12,7 +12,10 @@ const PATHS = {
   back: 'M15 6l-6 6 6 6',
   forward: 'M9 6l6 6-6 6',
   plus: 'M12 5v14M5 12h14',
-  close: 'M6 6l12 12M18 6L6 18'
+  close: 'M6 6l12 12M18 6L6 18',
+  lock: 'M5 11h14v9H5zM8 11V8a4 4 0 0 1 8 0v3',
+  faceId: 'M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2M9 9v1M15 9v1M12 9v4h-1M9 16c1.5 1 4.5 1 6 0',
+  backspace: 'M21 5H9l-6 7 6 7h12zM17 9l-6 6M11 9l6 6'
 } as const
 
 export type IconName = keyof typeof PATHS

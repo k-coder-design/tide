@@ -1,4 +1,4 @@
-import type { KeyStore, Slot, SlotStore } from '../core/storage/vault'
+import type { KeyStore, Slot, SlotStore, StoredKey } from '../core/storage/vault'
 
 /**
  * Browser bindings for the vault, used only inside the Worker.
@@ -64,7 +64,7 @@ function openKeyDb(): Promise<IDBDatabase> {
   })
 }
 
-/** The non-extractable data key, kept by the browser in IndexedDB (lock off, T7). */
+/** The non-extractable data key (lock off) or the PIN- and Face ID-wrapped one (lock on, T21), in IndexedDB. */
 export function indexedDbKeys(): KeyStore {
   const run = async <T>(mode: IDBTransactionMode, action: (store: IDBObjectStore) => IDBRequest): Promise<T> => {
     const db = await openKeyDb()
@@ -80,7 +80,7 @@ export function indexedDbKeys(): KeyStore {
     }
   }
   return {
-    load: async () => (await run<CryptoKey | undefined>('readonly', (store) => store.get(DATA_KEY))) ?? null,
+    load: async () => (await run<StoredKey | undefined>('readonly', (store) => store.get(DATA_KEY))) ?? null,
     save: async (key) => {
       await run('readwrite', (store) => store.put(key, DATA_KEY))
     }

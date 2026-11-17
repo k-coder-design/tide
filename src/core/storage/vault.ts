@@ -7,8 +7,11 @@
  * altered fails to decrypt and the other slot (the previous save) is used. The newest valid slot wins.
  *
  * The data key is random (256 bits) and never stored in the clear. With the app lock off (T7,
- * the default) it is a non-extractable WebCrypto key kept by the browser (KeyStore → IndexedDB).
+ * the default) it is a non-extractable WebCrypto key kept by the browser (KeyStore → IndexedDB);
+ * with the lock on, the store holds a LockRecord instead — the key wrapped by the PIN and Face ID (lock.ts).
  */
+import { isLockRecord, type LockRecord } from './lock'
+
 
 const MAGIC = [0x54, 0x49, 0x44, 0x45] // "TIDE"
 const FORMAT = 1
@@ -23,9 +26,12 @@ export interface SlotStore {
   write(slot: Slot, bytes: Uint8Array): Promise<void>
 }
 
+/** What is kept next to the journal: the plain browser key (lock off) or the wrapped one (lock on). */
+export type StoredKey = CryptoKey | LockRecord
+
 export interface KeyStore {
-  load(): Promise<CryptoKey | null>
-  save(key: CryptoKey): Promise<void>
+  load(): Promise<StoredKey | null>
+  save(value: StoredKey): Promise<void>
 }
 
 export class StorageError extends Error {
@@ -76,7 +82,7 @@ export const newDataKey = (): Promise<CryptoKey> =>
 export class Vault {
   private constructor(
     private readonly slots: SlotStore,
-    private readonly key: CryptoKey,
+    private key: CryptoKey,
     private generation: number
   ) {}
 
@@ -84,24 +90,43 @@ export class Vault {
    * Opens storage and returns the last saved image (null on first launch).
    * Never starts empty over data it cannot read: that is an error, and nothing is overwritten.
    */
-  static async open(slots: SlotStore, keys: KeyStore): Promise<{ vault: Vault; image: Uint8Array | null }> {
-    const stored = await Promise.all([slots.read(0), slots.read(1)])
-    const present = stored.filter((bytes): bytes is Uint8Array => bytes !== null && bytes.byteLength > 0)
-    let key = await keys.load()
-    if (!key) {
-      if (present.length > 0) {
+  static async open(slots: SlotStore, keys: KeyStore): Promise<Opened | { locked: LockRecord }> {
+    const stored = await keys.load()
+    if (isLockRecord(stored)) return { locked: stored }
+    if (!stored) {
+      if ((await presentSlots(slots)).length > 0) {
         throw new StorageError('The key to your data is missing on this phone, so the journal cannot be opened. Restore from a backup.')
       }
-      key = await newDataKey()
+      const key = await newDataKey()
       await keys.save(key)
       return { vault: new Vault(slots, key, 0), image: null }
     }
+    return Vault.withKey(slots, stored)
+  }
+
+  /** Opens the saves with a known key — the browser's, or the one the PIN or Face ID just unwrapped. */
+  static async withKey(slots: SlotStore, key: CryptoKey): Promise<Opened> {
+    const present = await presentSlots(slots)
     const opened = (await Promise.all(present.map((bytes) => unseal(key, bytes)))).filter((slot) => slot !== null)
     if (present.length > 0 && opened.length === 0) {
       throw new StorageError('Your saved journal could not be decrypted, so it was left untouched. Restore from a backup.')
     }
     const newest = opened.sort((a, b) => b.generation - a.generation)[0]
     return { vault: new Vault(slots, key, newest?.generation ?? 0), image: newest?.plain ?? null }
+  }
+
+  /**
+   * Moves the saves to a new data key without a moment where nothing opens: the image is first written
+   * with the new key into the spare slot, then `commit` stores the new key, then the other slot follows.
+   * Cut off before the commit, the old key still opens the previous save; after it, the new key opens the new one.
+   */
+  async rekey(key: CryptoKey, image: Uint8Array, commit: () => Promise<void>): Promise<void> {
+    const generation = this.generation + 1
+    await this.slots.write((generation % 2) as Slot, await seal(key, generation, image))
+    await commit()
+    this.key = key
+    this.generation = generation
+    await this.save(image)
   }
 
   /** Encrypts the image into the slot not holding the latest save, so that one survives a failed write. */
@@ -111,4 +136,15 @@ export class Vault {
     await this.slots.write((generation % 2) as Slot, sealed)
     this.generation = generation
   }
+}
+
+export interface Opened {
+  vault: Vault
+  /** The last saved database image; null on first launch. */
+  image: Uint8Array | null
+}
+
+async function presentSlots(slots: SlotStore): Promise<Uint8Array[]> {
+  const stored = await Promise.all([slots.read(0), slots.read(1)])
+  return stored.filter((bytes): bytes is Uint8Array => bytes !== null && bytes.byteLength > 0)
 }

@@ -46,8 +46,10 @@ export function startOffline(): void {
 
   const tryApply = () => {
     if (busy()) return
-    // Off screen nobody sees the reload; on screen wait for a pause in use.
-    if (document.visibilityState === 'hidden' || Date.now() - lastTouch >= QUIET_MS) reload()
+    // Off screen nobody sees the reload. On screen wait for a pause in use — unless the journal is open
+    // behind App lock: a reload would lock it, so then the update waits until Tide leaves the screen (T21).
+    if (document.visibilityState === 'hidden') return reload()
+    if (document.documentElement.dataset.lock !== 'open' && Date.now() - lastTouch >= QUIET_MS) reload()
   }
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
