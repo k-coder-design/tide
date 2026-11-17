@@ -42,12 +42,21 @@ export function memorySlots(): SlotStore & { data: Array<Uint8Array | null> } {
   }
 }
 
-export function memoryKeys(): KeyStore & { key: StoredKey | null } {
+export function memoryKeys(): KeyStore & { key: StoredKey | null; saved: boolean } {
   const store = {
     key: null as StoredKey | null,
+    saved: false,
     load: async () => store.key,
     save: async (key: StoredKey) => {
       store.key = key
+    },
+    hasSaved: async () => store.saved,
+    noteSaved: async () => {
+      store.saved = true
+    },
+    clear: async () => {
+      store.key = null
+      store.saved = false
     }
   }
   return store

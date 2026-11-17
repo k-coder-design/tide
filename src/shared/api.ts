@@ -83,8 +83,14 @@ export interface LockContract {
 
 export type LockMethod = keyof LockContract
 
+/** Storage recovery (T24): answered even when the journal could not be opened. */
+export interface StorageContract {
+  /** After the saves disappeared: forget the orphaned key and open a new, empty journal. */
+  'storage.startOver'(): LockStatus
+}
+
 /** Everything the client can call. */
-export type ClientContract = ApiContract & LockContract
+export type ClientContract = ApiContract & LockContract & StorageContract
 export type ClientMethod = keyof ClientContract
 
 const LOCK_METHODS: ReadonlySet<string> = new Set<LockMethod>([

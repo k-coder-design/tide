@@ -3,7 +3,7 @@ import { isApiMethod, isLockMethod, WRITE_METHODS, type LockContract, type LockM
 import type { LockStatus, Result } from '../shared/types'
 import { DomainError, toAppError } from '../core/domain/errors'
 import { Session } from '../core/session'
-import { StorageError } from '../core/storage/vault'
+import { JournalMissingError, StorageError } from '../core/storage/vault'
 import { indexedDbKeys, opfsSlots } from './browserStorage'
 
 /**
@@ -23,11 +23,11 @@ const START_TRIES = 5
  * files for a moment. Retrying is safe — nothing is written until the journal has opened. A missing key or
  * undecryptable saves (StorageError) are not retried: they do not get better by waiting.
  */
-async function start(): Promise<Session> {
+async function start(open: typeof Session.start = Session.start): Promise<Session> {
   const sqlite3 = await sqlite3InitModule()
   for (let attempt = 1; ; attempt++) {
     try {
-      return await Session.start(sqlite3, opfsSlots(), indexedDbKeys())
+      return await open(sqlite3, opfsSlots(), indexedDbKeys())
     } catch (error) {
       if (error instanceof StorageError) throw error
       console.warn(`Tide could not open storage (try ${attempt} of ${START_TRIES})`, error)
@@ -40,7 +40,9 @@ async function start(): Promise<Session> {
   }
 }
 
-const ready = start()
+let ready = start()
+// Errors reach the interface through the first call; keep the rejection from being reported as unhandled.
+ready.catch(() => undefined)
 
 type LockCalls = { [M in LockMethod]: (session: Session, ...args: Parameters<LockContract[M]>) => LockStatus | Promise<LockStatus> }
 
@@ -55,6 +57,12 @@ const LOCK_CALLS: LockCalls = {
 }
 
 async function call(method: unknown, args: unknown[]): Promise<unknown> {
+  if (method === 'storage.startOver') {
+    // Only after the saves disappeared (T24); the vault refuses while any save is present.
+    ready = start((sqlite3, slots, keys) => Session.startOver(sqlite3, slots, keys))
+    ready.catch(() => undefined)
+    return (await ready).status()
+  }
   const session = await ready
   if (isLockMethod(method)) return (LOCK_CALLS[method] as (s: Session, ...a: unknown[]) => unknown)(session, ...args)
   if (!isApiMethod(method)) throw new DomainError('NOT_FOUND', 'Unknown method')
@@ -74,7 +82,9 @@ scope.addEventListener('message', (event) => {
       result = { ok: true, data: await call(method, args) }
     } catch (error) {
       result =
-        error instanceof StorageError
+        error instanceof JournalMissingError
+          ? { ok: false, error: { code: 'MISSING', message: error.message } }
+          : error instanceof StorageError
           ? { ok: false, error: { code: 'STORAGE', message: error.message } }
           : { ok: false, error: toAppError(error) }
     }

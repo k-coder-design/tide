@@ -1088,6 +1088,13 @@ h2 {
   line-height: 1.45;
 }
 
+.fatal-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 @keyframes slide-up {
   from {
     transform: translateY(40px);

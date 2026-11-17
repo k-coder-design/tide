@@ -57,6 +57,8 @@ export function opfsSlots(): SlotStore {
 const KEY_DB = 'tide-keys'
 const KEY_STORE = 'keys'
 const DATA_KEY = 'data'
+/** Set after the first save of the journal is stored (T24). */
+const SAVED_NOTE = 'saved'
 
 function openKeyDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -67,7 +69,7 @@ function openKeyDb(): Promise<IDBDatabase> {
   })
 }
 
-/** The non-extractable data key (lock off) or the PIN-wrapped one (lock on, T21), in IndexedDB. */
+/** The non-extractable data key (lock off) or the PIN-wrapped one (lock on, T21), and the saved note (T24), in IndexedDB. */
 export function indexedDbKeys(): KeyStore {
   const run = async <T>(mode: IDBTransactionMode, action: (store: IDBObjectStore) => IDBRequest): Promise<T> => {
     const db = await openKeyDb()
@@ -86,6 +88,13 @@ export function indexedDbKeys(): KeyStore {
     load: async () => (await run<StoredKey | undefined>('readonly', (store) => store.get(DATA_KEY))) ?? null,
     save: async (key) => {
       await run('readwrite', (store) => store.put(key, DATA_KEY))
+    },
+    hasSaved: async () => (await run<unknown>('readonly', (store) => store.get(SAVED_NOTE))) === true,
+    noteSaved: async () => {
+      await run('readwrite', (store) => store.put(true, SAVED_NOTE))
+    },
+    clear: async () => {
+      await run('readwrite', (store) => store.clear())
     }
   }
 }

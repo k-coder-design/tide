@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { isLockRecord, type LockRecord } from './storage/lock'
 import { Session } from './session'
+import { JournalMissingError } from './storage/vault'
 import { loadSqlite, memoryKeys, memorySlots } from './testing'
 
 const TODAY = '2026-11-17'
@@ -139,5 +140,63 @@ describe('app lock', () => {
     withOldKey.key = plainKey
     const reopened = await start(slots, withOldKey)
     expect(desire(reopened.session)).toBe(2)
+  })
+})
+
+describe('a journal whose saves disappeared (T24)', () => {
+  const wipeSaves = (slots: ReturnType<typeof memorySlots>) => slots.data.fill(null)
+
+  it('stops instead of starting an empty journal, and writes nothing', async () => {
+    const { session, slots, keys } = await start()
+    await writeDesire(session, 4)
+    expect(keys.saved).toBe(true)
+    const key = keys.key
+    wipeSaves(slots)
+    await expect(start(slots, keys)).rejects.toThrow(JournalMissingError)
+    expect(slots.data).toEqual([null, null])
+    expect(keys.key).toBe(key)
+  })
+
+  it('stops before the PIN too, when the lock is on', async () => {
+    const { session, slots, keys } = await start()
+    await session.enable('2580')
+    wipeSaves(slots)
+    await expect(start(slots, keys)).rejects.toThrow('no longer on this phone')
+  })
+
+  it('a first launch cut off before its first save still opens, as a new journal', async () => {
+    const { session, slots, keys } = await start()
+    wipeSaves(slots)
+    keys.saved = false
+    void session
+    const again = await start(slots, keys)
+    expect(desire(again.session)).toBeNull()
+  })
+
+  it('a journal saved by an older Tide, without the note, gets the note on its next launch', async () => {
+    const { session, slots, keys } = await start()
+    await writeDesire(session, 2)
+    keys.saved = false
+    await start(slots, keys)
+    expect(keys.saved).toBe(true)
+  })
+
+  it('starting over forgets the old key and the PIN and opens an empty journal', async () => {
+    const { session, slots, keys } = await start()
+    await session.enable('2580')
+    wipeSaves(slots)
+    const fresh = await Session.startOver(await loadSqlite(), slots, keys, { pinIterations: 1000 })
+    expect(fresh.status()).toMatchObject({ enabled: false, locked: false })
+    expect(desire(fresh)).toBeNull()
+    await writeDesire(fresh, 3)
+    expect(desire((await start(slots, keys)).session)).toBe(3)
+  })
+
+  it('starting over is refused while any save is present', async () => {
+    const { session, slots, keys } = await start()
+    await writeDesire(session, 5)
+    slots.data[1] = null // the older save; the newest one stays
+    await expect(Session.startOver(await loadSqlite(), slots, keys)).rejects.toThrow('nothing was reset')
+    expect(desire((await start(slots, keys)).session)).toBe(5)
   })
 })

@@ -3,7 +3,7 @@ import { rememberTab, tabAfterUpdate } from '../offline'
 import type { LockStatus, Settings } from '../shared/types'
 import { Icon, type IconName } from './components/Icon'
 import { useLoad } from './components/controls'
-import { api, onLocked } from './lib/client'
+import { api, ApiError, onLocked } from './lib/client'
 import type { Overlay, Tab } from './navigation'
 import { DesireSheet } from './screens/DesireSheet'
 import { EntryDetail } from './screens/EntryDetail'
@@ -11,6 +11,7 @@ import { EntryForm } from './screens/EntryForm'
 import { InsightsScreen } from './screens/InsightsScreen'
 import { JournalScreen } from './screens/JournalScreen'
 import { LockScreen } from './screens/LockScreen'
+import { MissingJournal } from './screens/MissingJournal'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { TodayScreen } from './screens/TodayScreen'
 
@@ -34,10 +35,15 @@ function applyTheme(settings: Settings | undefined): void {
  */
 export function App() {
   const [lock, setLock] = useState<LockStatus>()
-  const [startError, setStartError] = useState<string | null>(null)
+  const [startError, setStartError] = useState<{ missing: boolean; message: string } | null>(null)
   const refresh = useCallback(
     () =>
-      api('lock.status').then(setLock, (reason: unknown) => setStartError(reason instanceof Error ? reason.message : 'Something went wrong')),
+      api('lock.status').then(setLock, (reason: unknown) =>
+        setStartError({
+          missing: reason instanceof ApiError && reason.error.code === 'MISSING',
+          message: reason instanceof Error ? reason.message : 'Something went wrong'
+        })
+      ),
     []
   )
   useEffect(() => {
@@ -52,11 +58,22 @@ export function App() {
     document.documentElement.dataset.lock = !lock?.enabled ? 'off' : lock.locked ? 'locked' : 'open'
   }, [lock])
 
+  if (startError?.missing) {
+    return (
+      <MissingJournal
+        message={startError.message}
+        onStarted={(status) => {
+          setStartError(null)
+          setLock(status)
+        }}
+      />
+    )
+  }
   if (startError) {
     return (
       <main className="fatal">
         <h1>Tide could not open</h1>
-        <p>{startError}</p>
+        <p>{startError.message}</p>
       </main>
     )
   }

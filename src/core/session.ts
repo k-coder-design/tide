@@ -58,6 +58,20 @@ export class Session {
     return session
   }
 
+  /**
+   * After the saves disappeared (T24): forgets the orphaned key and opens a new, empty journal, with the lock off.
+   * The vault refuses while any save is present, so this cannot erase a journal.
+   */
+  static async startOver(
+    sqlite3: Sqlite3Static,
+    slots: SlotStore,
+    keys: KeyStore,
+    options: { clock?: () => number; pinIterations?: number } = {}
+  ): Promise<Session> {
+    await Vault.startOver(slots, keys)
+    return Session.start(sqlite3, slots, keys, options)
+  }
+
   /** The domain API; only while the journal is open. */
   handlers(): ApiHandlers {
     if (!this.journal) throw new DomainError('LOCKED', 'Tide is locked')
@@ -88,7 +102,7 @@ export class Session {
   async unlockWithPin(pin: string): Promise<LockStatus> {
     if (this.journal || !this.record) return this.status()
     const raw = await this.checkPin(pin)
-    await this.load(await Vault.withKey(this.slots, await importDataKey(raw)), raw)
+    await this.load(await Vault.withKey(this.slots, this.keys, await importDataKey(raw)), raw)
     return this.status()
   }
 
