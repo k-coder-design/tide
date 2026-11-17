@@ -4,6 +4,16 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 
 Plan: [PLAN.md](PLAN.md). Data model: [docs/DATA_MODEL.md](docs/DATA_MODEL.md). Notes for AI agents: [AGENTS.md](AGENTS.md).
 
+## Install on iPhone
+
+The app is published at https://k-coder-design.github.io/tide/ on every push to `main` (`.github/workflows/pages.yml`). Only the app's code is there; the journal stays on the phone.
+
+1. Open the link in **Safari** on the iPhone.
+2. Share → **Add to Home Screen** → Add.
+3. Open Tide from the Home Screen icon and use it only from there: Safari and the Home Screen app keep separate data.
+
+Updates arrive by themselves the next time Tide is opened with a connection. Removing the icon deletes the journal (backups come in phase 4).
+
 ## Running
 
 Needs Node.js 22+.
