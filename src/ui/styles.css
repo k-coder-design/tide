@@ -1,0 +1,44 @@
+/* Temporary base styles; the design system comes in phase 1. */
+:root {
+  --bg: #f6f3ef;
+  --text: #1d1f23;
+  --muted: #6b6f76;
+  color-scheme: light dark;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14161a;
+    --text: #eceae6;
+    --muted: #9a9ea6;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.app {
+  min-height: 100dvh;
+  padding: calc(env(safe-area-inset-top) + 24px) 16px calc(env(safe-area-inset-bottom) + 24px);
+}
+
+.app h1 {
+  margin: 0 0 8px;
+  font-size: 34px;
+  font-weight: 700;
+}
+
+.app p {
+  margin: 0;
+  color: var(--muted);
+}

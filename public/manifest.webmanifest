@@ -1,0 +1,11 @@
+{
+  "name": "Tide",
+  "short_name": "Tide",
+  "description": "A personal journal.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f3ef",
+  "theme_color": "#f6f3ef",
+  "icons": []
+}
