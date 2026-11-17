@@ -66,7 +66,7 @@ Each part is optional: a day may have only desire, only flow, or both.
 | `note` | TEXT NULL | |
 | `updated_at` | TEXT NOT NULL | |
 
-**Bleeding episodes** are computed, not stored: consecutive days with flow `spotting` or heavier, where gaps of up to 2 days (`none` or not recorded) do not break the episode. An episode has a start, a length and its strongest flow.
+**Bleeding episodes** are computed, not stored: consecutive days with flow `spotting` or heavier, where gaps of up to 2 days (`none` or not recorded) do not break the episode. An episode has a start, an end (none while it is ongoing), a length in days and its strongest flow; its **cycle** is the number of days from its start to the next episode's start (none for the latest). Imported and Tide-recorded days form episodes the same way.
 
 **Health import (phase 4, T12)** fills `flow` with `flow_source = 'health'`. Format checked on a real export (17.11.2026): `export.xml` (hundreds of MB) holds day records `<Record type="…" startDate="YYYY-MM-DD 12:00:00 +HHMM" …>` — one per day, at local noon, so the date part of `startDate` is the local day.
 
