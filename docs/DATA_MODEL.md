@@ -140,9 +140,9 @@ Same stack as Recallo: Mobile — SQLite WebAssembly in a Web Worker, the core r
 
 1. On start the encrypted file is read from OPFS, decrypted with WebCrypto (AES-GCM) and loaded into an in-memory SQLite database.
 2. After each write the database is exported (a few hundred KB even after years of use), encrypted and written back to OPFS.
-3. The data key is random (256 bits) and is never stored in the clear. It is wrapped by:
-   - a PIN → PBKDF2-SHA256 key — always available;
-   - a passkey with the WebAuthn PRF extension → Face ID unlocks the app (iOS 18+); the passkey never leaves the device.
+3. The data key is random (256 bits) and is never stored in the clear. How it is kept depends on the optional app lock (T7):
+   - **Lock off** (the default): the key is a non-extractable WebCrypto key kept in IndexedDB. The file in OPFS is still encrypted, but anyone who opens Tide on the unlocked phone sees the data.
+   - **Lock on**: the key is wrapped by a PIN → PBKDF2-SHA256 key, and optionally also by a passkey with the WebAuthn PRF extension, so Face ID unlocks the app (iOS 18+); the passkey never leaves the device. Turning the lock on re-wraps the key; turning it off asks for the PIN or Face ID, then goes back to the stored key.
 4. A backup file (phase 4) is the same database encrypted with a key from a separate **backup password**, because the device keys do not move to a new iPhone.
 
 ## Merging backups (phase 4)
