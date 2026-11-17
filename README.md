@@ -1,6 +1,6 @@
 # Tide
 
-A private iPhone app for tracking libido dynamics: partnered sex, other sexual activity and daily desire. A Home Screen web app, data stays on the device. Version 0.2.1 (phase 2 — the journal).
+A private iPhone app for tracking libido dynamics: partnered sex, other sexual activity and daily desire. A Home Screen web app, data stays on the device. Version 0.2.2 (phase 2 — the journal).
 
 Plan: [PLAN.md](PLAN.md). Data model: [docs/DATA_MODEL.md](docs/DATA_MODEL.md). Notes for AI agents: [AGENTS.md](AGENTS.md).
 
@@ -12,7 +12,7 @@ The app is published at https://k-coder-design.github.io/tide/ on every push to 
 2. Share → **Add to Home Screen** → Add.
 3. Open Tide from the Home Screen icon and use it only from there: Safari and the Home Screen app keep separate data.
 
-Updates arrive by themselves the next time Tide is opened with a connection. Removing the icon deletes the journal (backups come in phase 4).
+Updates arrive by themselves: Tide checks for a new version when opened, when brought back to the screen and every 10 minutes, and switches to it when no form is open. Removing the icon deletes the journal (backups come in phase 4).
 
 ## Running
 

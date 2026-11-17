@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { rememberTab, tabAfterUpdate } from '../offline'
 import type { Settings } from '../shared/types'
 import { Icon, type IconName } from './components/Icon'
 import { useLoad } from './components/controls'
@@ -27,7 +28,11 @@ function applyTheme(settings: Settings | undefined): void {
 }
 
 export function App() {
-  const [tab, setTab] = useState<Tab>('today')
+  const [tab, setTab] = useState<Tab>(() => {
+    const resumed = tabAfterUpdate()
+    return TABS.some((t) => t.tab === resumed) ? (resumed as Tab) : 'today'
+  })
+  useEffect(() => rememberTab(tab), [tab])
   const [stack, setStack] = useState<Overlay[]>([])
   // Bumped after every change, so open screens reload their data.
   const [version, setVersion] = useState(0)

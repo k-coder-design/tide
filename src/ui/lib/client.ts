@@ -30,6 +30,9 @@ worker.addEventListener('error', (event) => {
   pending.clear()
 })
 
+/** Calls not answered yet: an update reload waits for them, so a save is never cut off. */
+export const callsInFlight = (): number => pending.size
+
 export function api<M extends ApiMethod>(method: M, ...args: Parameters<ApiContract[M]>): Promise<ReturnType<ApiContract[M]>> {
   return new Promise((resolve, reject) => {
     const id = ++nextId
