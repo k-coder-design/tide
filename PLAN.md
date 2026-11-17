@@ -33,7 +33,7 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 ## Phases
 
 0. **Setup** ✅ — Recallo studied, project created (builds, runs at iPhone size), data model approved ([docs/DATA_MODEL.md](docs/DATA_MODEL.md)).
-1. **Design** — style options (A "Calm Water" chosen, T10), design system (colors, type, components, light/dark), mockups of all key screens including the cycle section, a clickable prototype, a neutral icon. ✅ when the mockups are approved.
+1. **Design** ✅ — style A "Calm Water" (T10), design system (colors, type, components, light/dark), app icon C, and clickable mockups of all key screens at 428×926 (T16): Lock, Today, New entry, Journal (List / Calendar), Entry details, Insights (Libido / Cycle), Pill log, Settings. Approved 17.11.2026 on the canvas https://claude.ai/artifact/5HgMMc8EcbFnmyiJEsLoWc.
 2. **Core: the journal** — encrypted local database, quick logging, daily desire, timeline and calendar, partner labels, offline mode.
 3. **Privacy** — optional app lock (PIN / Face ID, auto-lock) switched on and off in Settings, blur in the app switcher, neutral icon and name.
 4. **Backups and moving** — encrypted backup file with a password, saved through the Share sheet (T14), restore (replace / merge), backup reminder, delete all data; one-time import of menstrual history from an Apple Health export (T12) — if it fails, the cycle section is removed (T11). ✅ when a backup from the old phone fully restores on a new one.
