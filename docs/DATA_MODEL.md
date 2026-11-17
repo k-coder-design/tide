@@ -68,7 +68,16 @@ Each part is optional: a day may have only desire, only flow, or both.
 
 **Bleeding episodes** are computed, not stored: consecutive days with flow `spotting` or heavier, where gaps of up to 2 days (`none` or not recorded) do not break the episode. An episode has a start, a length and its strongest flow.
 
-**Health import (phase 4, T12)** fills `flow` with `flow_source = 'health'`: `HKCategoryTypeIdentifierMenstrualFlow` light / medium / heavy / unspecified → the same value, `HKCategoryTypeIdentifierIntermenstrualBleeding` → `spotting` (the stronger value wins when a day has both). Health days marked "no flow" are skipped. A day already recorded in Tide is never overwritten; re-importing the same export changes nothing.
+**Health import (phase 4, T12)** fills `flow` with `flow_source = 'health'`. Format checked on a real export (17.11.2026): `export.xml` (hundreds of MB) holds day records `<Record type="…" startDate="YYYY-MM-DD 12:00:00 +HHMM" …>` — one per day, at local noon, so the date part of `startDate` is the local day.
+
+| Health record | Value | Tide `flow` |
+| --- | --- | --- |
+| `HKCategoryTypeIdentifierMenstrualFlow` | `HKCategoryValueVaginalBleedingLight` / `Medium` / `Heavy` (older exports: `HKCategoryValueMenstrualFlow…`) | `light` / `medium` / `heavy` |
+| same | `…Unspecified` | `unspecified` |
+| same | `…None` | skipped |
+| `HKCategoryTypeIdentifierIntermenstrualBleeding` | `HKCategoryValueNotApplicable` | `spotting` |
+
+When a day has several records the stronger flow wins. A day already recorded in Tide is never overwritten; re-importing the same export changes nothing. The export also carries `HKCategoryTypeIdentifierContraceptive` and `HKCategoryTypeIdentifierSexualActivity` records — not imported (see PLAN.md, T12).
 
 ### `day_symptoms` — symptom tags by day (phase 6)
 
