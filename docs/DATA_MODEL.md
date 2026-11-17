@@ -77,7 +77,11 @@ Each part is optional: a day may have only desire, only flow, or both.
 | same | `…None` | skipped |
 | `HKCategoryTypeIdentifierIntermenstrualBleeding` | `HKCategoryValueNotApplicable` | `spotting` |
 
-When a day has several records the stronger flow wins. A day already recorded in Tide is never overwritten; re-importing the same export changes nothing. The export also carries `HKCategoryTypeIdentifierContraceptive` and `HKCategoryTypeIdentifierSexualActivity` records — not imported (see PLAN.md, T12).
+When a day has several records the stronger flow wins. A day already recorded in Tide is never overwritten; re-importing the same export changes nothing.
+
+**Contraceptive courses** are imported too: each `HKCategoryTypeIdentifierContraceptive` record (`HKCategoryValueContraceptiveOral` and so on) becomes a `medications` row with `is_contraceptive = 1`, `source = 'health'`, `started_on` / `ended_on` from its dates (an end date in the year 4001 means "still taking" → NULL) and a placeholder name the user renames. Health keeps courses, **not individual doses**, so no `pill_log` rows are created for the past — that would claim every pill was taken. Instead the user sets the course's approximate usual time (`usual_time_from` / `usual_time_to`, for example 07:00–09:00); past days of the course show "usual time 07:00–09:00 · no dose log", or "time unknown" when it is not set, and are left out of interval and lateness analytics. The dose log starts on the first dose logged in Tide.
+
+`HKCategoryTypeIdentifierSexualActivity` records are not imported.
 
 ### `day_symptoms` — symptom tags by day (phase 6)
 
@@ -117,6 +121,8 @@ Computed, not stored (Tide only shows numbers and flags, gives no medical advice
 | `name` | TEXT NOT NULL | e.g. a contraceptive or an antidepressant |
 | `is_contraceptive` | INTEGER NOT NULL DEFAULT 0 | 1 — shown automatically on sex events within the course (see `sex_details`) |
 | `regimen` | TEXT NULL | `continuous` · `21/7` · `24/4` · `other` — for contraceptives |
+| `source` | TEXT NOT NULL DEFAULT 'tide' | `tide` · `health` (imported course) |
+| `usual_time_from`, `usual_time_to` | TEXT NULL | approximate usual local time `HH:MM` for days without a dose log (imported history); both NULL — "time unknown" |
 | `interval_hours` | REAL NULL | time between doses, usually 24; with it the pill appears in the daily check-in and the pill log |
 | `delay_window_hours` | REAL NULL | allowed delay from the leaflet, set by the user |
 | `started_on` | TEXT NOT NULL | `YYYY-MM-DD` |
