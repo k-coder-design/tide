@@ -16,7 +16,8 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 | T8 | Interface language — English. | 17.11.2026 |
 | T9 | **Public GitHub repository** `k-coder-design/tide`, as Recallo — free GitHub Pages hosting later. Code and specs are public; user data never leaves the device. Specs are kept in English in the repository. | 17.11.2026 |
 | T10 | **Style A "Calm Water"**: Manrope (bundled with the app), deep teal `#1D6B75` for other activity and desire, terracotta `#C0573B` for partnered activity, warm sand background `#F4F2EE`; dark theme `#0E1719` / `#5FB3BC` / `#E8987E`. Options canvas: https://claude.ai/artifact/5HgMMc8EcbFnmyiJEsLoWc | 17.11.2026 |
-| T11 | **No menstrual cycle tracking** — neither Tide's own nor imported from Apple Health. With a continuous contraceptive the bleeding is irregular and light, and the cycle data is safer in Apple Health (end-to-end encrypted iCloud) than in a device-only web app. | 17.11.2026 |
+| T11 | **No ongoing menstrual cycle tracking** in Tide. With a continuous contraceptive the bleeding is irregular and light, and the cycle data is safer in Apple Health (end-to-end encrypted iCloud) than in a device-only web app. | 17.11.2026 |
+| T12 | **One-time import of menstrual history from Apple Health.** Health → Export All Health Data → `export.zip` is sent to the Mac; a script in this repository reads it there (the export is too large for the phone's browser) and writes a Tide import file with flow and spotting by day; Tide imports it like a backup merge. The history is read-only: shown in the calendar and overlaid on charts where it overlaps Tide's own data. **Optional**: if the export turns out unusable, the import is dropped with no replacement (no Shortcuts, no manual entry). | 17.11.2026 |
 
 ## Web app limits on iPhone (affect phases 3 and 7)
 
@@ -31,7 +32,7 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 1. **Design** — style options (A "Calm Water" chosen, T10), design system (colors, type, components, light/dark), mockups of all key screens, a clickable prototype, a neutral icon. ✅ when the mockups are approved.
 2. **Core: the journal** — encrypted local database, quick logging, daily desire, timeline and calendar, partner labels, offline mode.
 3. **Privacy** — PIN / Face ID, auto-lock, blur in the app switcher, neutral icon and name.
-4. **Backups and moving** — encrypted backup file with a password, Share sheet, restore (replace / merge), backup reminder, delete all data. ✅ when a backup from the old phone fully restores on a new one.
+4. **Backups and moving** — encrypted backup file with a password, Share sheet, restore (replace / merge), backup reminder, delete all data; one-time import of menstrual history from an Apple Health export (T12). ✅ when a backup from the old phone fully restores on a new one.
 5. **Analytics** — frequency by week / month for both streams, desire with a moving average, heat-map calendar, period comparison.
 6. **Medications** — medication courses, contraceptives shown on sex events automatically, courses overlaid on charts and simple findings (for example desire before and after a change of medication).
 7. **Habit** — reminders and a quick-add shortcut (see the limits above).

@@ -1,6 +1,6 @@
 # Tide — data model (draft for review)
 
-Status: **approved, phase 0** (17.11.2026). Nothing is implemented yet; the tables appear in phase 2 (core), `medications` in phase 6 — together with the automatic contraceptive display on sex events.
+Status: **approved, phase 0** (17.11.2026). Nothing is implemented yet; the tables appear in phase 2 (core), `health_flow` in phase 4, `medications` in phase 6 — together with the automatic contraceptive display on sex events.
 
 ## What the app measures
 
@@ -59,6 +59,16 @@ Hormonal contraception is **not** stored per event: it comes from `medications`.
 | `desire` | INTEGER NOT NULL | 1–10 |
 | `note` | TEXT NULL | |
 | `updated_at` | TEXT NOT NULL | |
+
+### `health_flow` — imported once from Apple Health (phase 4, T12), read-only
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `date` | TEXT PK | local date `YYYY-MM-DD` |
+| `flow` | TEXT NULL | `unspecified` · `light` · `medium` · `heavy` — from `HKCategoryTypeIdentifierMenstrualFlow`; NULL when the day has spotting only |
+| `spotting` | INTEGER NOT NULL DEFAULT 0 | 1 — `HKCategoryTypeIdentifierIntermenstrualBleeding` that day |
+
+Not editable in the app; re-importing the same export replaces the rows. Health days marked "no flow" are skipped.
 
 ### `medications` — phase 6
 
