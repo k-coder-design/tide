@@ -60,7 +60,7 @@ Hormonal contraception is **not** stored per event: it comes from `medications`.
 | `note` | TEXT NULL | |
 | `updated_at` | TEXT NOT NULL | |
 
-### `health_flow` — imported once from Apple Health (phase 4, T12), read-only
+### `health_flow` — imported once from Apple Health (phase 4, T12)
 
 | Column | Type | Notes |
 | --- | --- | --- |
@@ -68,7 +68,9 @@ Hormonal contraception is **not** stored per event: it comes from `medications`.
 | `flow` | TEXT NULL | `unspecified` · `light` · `medium` · `heavy` — from `HKCategoryTypeIdentifierMenstrualFlow`; NULL when the day has spotting only |
 | `spotting` | INTEGER NOT NULL DEFAULT 0 | 1 — `HKCategoryTypeIdentifierIntermenstrualBleeding` that day |
 
-Not editable in the app; re-importing the same export replaces the rows. Health days marked "no flow" are skipped.
+Re-importing the same export replaces the rows. Health days marked "no flow" are skipped.
+
+**Pending the Health export check (PLAN.md, phase 0b):** if the import works, the full cycle section (T13) adds a daily `flow` to `daily_checkins`, a `pill_log` (date, time taken, medication), a `regimen` on `medications`, and symptom tags; `health_flow` then becomes the imported part of the same flow history. These tables are specified after the check.
 
 ### `medications` — phase 6
 

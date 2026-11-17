@@ -11,13 +11,14 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 | T3 | **Data only on the device**, encrypted; moving to a new phone — by an encrypted backup file. No server, no MCP. | 17.11.2026 |
 | T4 | **Desire = daily rating 1–10**; notable fantasies can be logged as separate events. | 17.11.2026 |
 | T5 | Sex details (all optional): partner label, satisfaction 1–10 (also for masturbation), orgasm, initiator, protection (none / condom / other). | 17.11.2026 |
-| T6 | Factors: medications (the menstrual cycle was dropped, T11). A medication marked as a contraceptive is shown automatically on sex events within its course — computed, not stored per event. | 17.11.2026 |
+| T6 | Factors: medications; the menstrual cycle — see T11. A medication marked as a contraceptive is shown automatically on sex events within its course — computed, not stored per event. | 17.11.2026 |
 | T7 | Privacy: PIN / Face ID lock, neutral icon and name, neutral reminders, encrypted database. | 17.11.2026 |
 | T8 | Interface language — English. | 17.11.2026 |
 | T9 | **Public GitHub repository** `k-coder-design/tide`, as Recallo — free GitHub Pages hosting later. Code and specs are public; user data never leaves the device. Specs are kept in English in the repository. | 17.11.2026 |
 | T10 | **Style A "Calm Water"**: Manrope (bundled with the app), deep teal `#1D6B75` for other activity and desire, terracotta `#C0573B` for partnered activity, warm sand background `#F4F2EE`; dark theme `#0E1719` / `#5FB3BC` / `#E8987E`. Options canvas: https://claude.ai/artifact/5HgMMc8EcbFnmyiJEsLoWc | 17.11.2026 |
-| T11 | **No ongoing menstrual cycle tracking** in Tide. With a continuous contraceptive the bleeding is irregular and light, and the cycle data is safer in Apple Health (end-to-end encrypted iCloud) than in a device-only web app. | 17.11.2026 |
-| T12 | **One-time import of menstrual history from Apple Health.** Health → Export All Health Data → `export.zip` is sent to the Mac; a script in this repository reads it there (the export is too large for the phone's browser) and writes a Tide import file with flow and spotting by day; Tide imports it like a backup merge. The history is read-only: shown in the calendar and overlaid on charts where it overlaps Tide's own data. **Optional**: if the export turns out unusable, the import is dropped with no replacement (no Shortcuts, no manual entry). | 17.11.2026 |
+| T11 | **Menstrual cycle depends on the Health import (T12)**: if the history can be imported, Tide gets a full cycle section (T13), so sexual activity and the cycle are tracked in one place; if not, Tide keeps no cycle data at all. | 17.11.2026 |
+| T12 | **One-time import of menstrual history from Apple Health.** Health → Export All Health Data → `export.zip` is sent to the Mac; a script in this repository reads it there (the export is too large for the phone's browser) and writes a Tide import file with flow and spotting by day; Tide imports it like a backup merge. The imported days become the start of the cycle section's history. If the export turns out unusable, neither the import nor the cycle section is built (no Shortcuts, no manual backfill). | 17.11.2026 |
+| T13 | **Cycle section (only if T12 works)**, shaped for a continuous contraceptive with irregular, light bleeding: daily flow in the check-in (none / spotting / light / medium / heavy — no "real period" classification, "none" is stored too); bleeding episodes computed from consecutive days; pill log with the time taken and a delay window set by the user from the leaflet (Tide flags late pills, gives no medical advice); symptom tags; analytics — bleeding days per month, gaps between episodes, heat map, links to late pills and to desire; no period or ovulation predictions; a summary export for a doctor. Raises the cost of losing the phone — the backup approach (T3) is to be revisited. | 17.11.2026 |
 
 ## Web app limits on iPhone (affect phases 3 and 7)
 
@@ -29,12 +30,13 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 ## Phases
 
 0. **Setup** ✅ — Recallo studied, project created (builds, runs at iPhone size), data model approved ([docs/DATA_MODEL.md](docs/DATA_MODEL.md)).
+0b. **Health export check** — look at a real Apple Health export: are menstrual flow and spotting there, by day, for the whole history? Decides T11: with or without the cycle section. Done before the screen mockups, which depend on it.
 1. **Design** — style options (A "Calm Water" chosen, T10), design system (colors, type, components, light/dark), mockups of all key screens, a clickable prototype, a neutral icon. ✅ when the mockups are approved.
 2. **Core: the journal** — encrypted local database, quick logging, daily desire, timeline and calendar, partner labels, offline mode.
 3. **Privacy** — PIN / Face ID, auto-lock, blur in the app switcher, neutral icon and name.
 4. **Backups and moving** — encrypted backup file with a password, Share sheet, restore (replace / merge), backup reminder, delete all data; one-time import of menstrual history from an Apple Health export (T12). ✅ when a backup from the old phone fully restores on a new one.
 5. **Analytics** — frequency by week / month for both streams, desire with a moving average, heat-map calendar, period comparison.
-6. **Medications** — medication courses, contraceptives shown on sex events automatically, courses overlaid on charts and simple findings (for example desire before and after a change of medication).
+6. **Medications and cycle** — medication courses, contraceptives shown on sex events automatically, courses overlaid on charts and simple findings (for example desire before and after a change of medication); the cycle section (T13) if the Health import works.
 7. **Habit** — reminders and a quick-add shortcut (see the limits above).
 
 Phases 1–5 give the first useful version.
