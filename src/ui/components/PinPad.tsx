@@ -4,18 +4,15 @@ import { Icon } from './Icon'
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const
 
 /**
- * The PIN keypad from the Lock screen mockup: dots for the digits typed, a 3×4 pad, Face ID bottom left
- * when available, delete bottom right. Calls `onComplete` once all digits are in and clears itself.
+ * The PIN keypad from the Lock screen mockup: dots for the digits typed, a 3×4 pad, delete bottom right. Calls `onComplete` once all digits are in and clears itself.
  */
 export function PinPad({
   length,
   onComplete,
-  onFaceId,
   disabled = false
 }: {
   length: number
   onComplete: (pin: string) => void
-  onFaceId?: () => void
   disabled?: boolean
 }) {
   const [pin, setPin] = useState('')
@@ -43,13 +40,7 @@ export function PinPad({
             {digit}
           </button>
         ))}
-        {onFaceId ? (
-          <button type="button" className="pin-key plain" aria-label="Unlock with Face ID" disabled={disabled} onClick={onFaceId}>
-            <Icon name="faceId" size={30} color="var(--teal)" />
-          </button>
-        ) : (
-          <span />
-        )}
+        <span />
         <button type="button" className="pin-key" disabled={disabled} onClick={() => press('0')}>
           0
         </button>

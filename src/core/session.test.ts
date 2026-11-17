@@ -21,7 +21,7 @@ const desire = (session: Session) => session.handlers()['today.summary'](TODAY).
 describe('app lock', () => {
   it('lock off: Tide opens without a PIN and keeps the journal across launches', async () => {
     const { session, slots, keys } = await start()
-    expect(session.status()).toMatchObject({ enabled: false, locked: false, autoLock: 1, faceId: null })
+    expect(session.status()).toMatchObject({ enabled: false, locked: false, autoLock: 1 })
     await writeDesire(session, 4)
     const again = await start(slots, keys)
     expect(desire(again.session)).toBe(4)
@@ -83,17 +83,13 @@ describe('app lock', () => {
     expect((keys.key as LockRecord).failed).toBe(0)
   })
 
-  it('Face ID: the passkey secret unlocks; another secret does not', async () => {
+  it('a lock record from v0.3.0 loses its Face ID copy of the key on start; the PIN still opens', async () => {
     const { session, slots, keys } = await start()
     await session.enable('2580')
-    await writeDesire(session, 4)
-    await session.enableFaceId(bytes(1, 16), bytes(2), bytes(7))
-    expect(session.status().faceId).toEqual({ credentialId: bytes(1, 16), prfSalt: bytes(2) })
-
+    keys.key = { ...(keys.key as LockRecord), faceId: { credentialId: bytes(1, 16), prfSalt: bytes(2), iv: bytes(3, 12), data: bytes(4, 48) } } as LockRecord
     const next = await start(slots, keys)
-    await expect(next.session.unlockWithFaceId(bytes(8))).rejects.toThrow('Enter your PIN')
-    await next.session.unlockWithFaceId(bytes(7))
-    expect(desire(next.session)).toBe(4)
+    expect('faceId' in (keys.key as object)).toBe(false)
+    await next.session.unlockWithPin('2580')
   })
 
   it('change PIN asks for the current one; the old PIN stops working', async () => {
@@ -106,13 +102,12 @@ describe('app lock', () => {
     await next.session.unlockWithPin('7777')
   })
 
-  it('turning the lock off needs the PIN or Face ID, then Tide opens freely with the same journal', async () => {
+  it('turning the lock off needs the PIN, then Tide opens freely with the same journal', async () => {
     const { session, slots, keys } = await start()
     await session.enable('2580')
-    await session.enableFaceId(bytes(1, 16), bytes(2), bytes(7))
     await writeDesire(session, 1)
-    await expect(session.disable({ pin: '1111' })).rejects.toThrow('Wrong PIN')
-    expect((await session.disable({ secret: bytes(7) })).enabled).toBe(false)
+    await expect(session.disable('1111')).rejects.toThrow('Wrong PIN')
+    expect((await session.disable('2580')).enabled).toBe(false)
     expect(isLockRecord(keys.key)).toBe(false)
 
     const next = await start(slots, keys)
@@ -130,7 +125,7 @@ describe('app lock', () => {
     await expect(session.setAutoLock(3 as 1)).rejects.toThrow('not valid')
     session.lock()
     await expect(session.setAutoLock(5)).rejects.toThrow('Tide is locked')
-    await expect(session.enableFaceId(bytes(1, 16), bytes(2), bytes(7))).rejects.toThrow('Tide is locked')
+    await expect(session.changePin('2580', '1111')).rejects.toThrow('Tide is locked')
   })
 
   it('a save cut off while turning the lock on still opens with the old key', async () => {

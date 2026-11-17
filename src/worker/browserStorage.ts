@@ -18,6 +18,7 @@ interface SyncHandle {
 type FileHandleWithSync = FileSystemFileHandle & { createSyncAccessHandle(): Promise<SyncHandle> }
 
 const SLOT_FILES = ['tide-a.bin', 'tide-b.bin'] as const
+const MAX_SLOT_BYTES = 512 * 1024 * 1024
 
 export function opfsSlots(): SlotStore {
   const handle = async (slot: Slot): Promise<SyncHandle> => {
@@ -31,6 +32,8 @@ export function opfsSlots(): SlotStore {
       try {
         const size = await access.getSize()
         if (size === 0) return null
+        // A size the file cannot have (seen once as 2^64 right after a reload): fail the read, never guess.
+        if (!Number.isSafeInteger(size) || size < 0 || size > MAX_SLOT_BYTES) throw new Error(`Unreadable save size ${size}`)
         const bytes = new Uint8Array(size)
         await access.read(bytes, { at: 0 })
         return bytes
@@ -64,7 +67,7 @@ function openKeyDb(): Promise<IDBDatabase> {
   })
 }
 
-/** The non-extractable data key (lock off) or the PIN- and Face ID-wrapped one (lock on, T21), in IndexedDB. */
+/** The non-extractable data key (lock off) or the PIN-wrapped one (lock on, T21), in IndexedDB. */
 export function indexedDbKeys(): KeyStore {
   const run = async <T>(mode: IDBTransactionMode, action: (store: IDBObjectStore) => IDBRequest): Promise<T> => {
     const db = await openKeyDb()

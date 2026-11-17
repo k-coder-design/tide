@@ -1,6 +1,6 @@
 import type { Sqlite3Static } from '@sqlite.org/sqlite-wasm'
 import type { ApiHandlers } from '../shared/api'
-import type { LockProof, LockStatus } from '../shared/types'
+import type { LockStatus } from '../shared/types'
 import { openMemoryDatabase, type MemoryDatabase } from './db/wasm'
 import { createContext } from './domain/context'
 import { DomainError } from './domain/errors'
@@ -14,9 +14,7 @@ import {
   newRawKey,
   PIN_LENGTH,
   unwrapWithPin,
-  unwrapWithSecret,
   wrapWithPin,
-  wrapWithSecret,
   type AutoLock,
   type Bytes,
   type LockRecord
@@ -55,7 +53,7 @@ export class Session {
   ): Promise<Session> {
     const session = new Session(sqlite3, slots, keys, options.clock ?? Date.now, options.pinIterations)
     const opened = await Vault.open(slots, keys)
-    if ('locked' in opened) session.record = opened.locked
+    if ('locked' in opened) session.record = await session.withoutFaceId(opened.locked)
     else await session.load(opened, null)
     return session
   }
@@ -83,7 +81,6 @@ export class Session {
       enabled: record !== null,
       locked: this.journal === null,
       autoLock: record?.autoLock ?? DEFAULT_AUTO_LOCK,
-      faceId: record?.faceId ? { credentialId: record.faceId.credentialId, prfSalt: record.faceId.prfSalt } : null,
       retryAt: record && record.retryAt > this.clock() ? record.retryAt : null
     }
   }
@@ -91,13 +88,6 @@ export class Session {
   async unlockWithPin(pin: string): Promise<LockStatus> {
     if (this.journal || !this.record) return this.status()
     const raw = await this.checkPin(pin)
-    await this.load(await Vault.withKey(this.slots, await importDataKey(raw)), raw)
-    return this.status()
-  }
-
-  async unlockWithFaceId(secret: Bytes): Promise<LockStatus> {
-    if (this.journal || !this.record) return this.status()
-    const raw = await this.checkSecret(secret)
     await this.load(await Vault.withKey(this.slots, await importDataKey(raw)), raw)
     return this.status()
   }
@@ -122,7 +112,6 @@ export class Session {
       kind: 'lock',
       version: 1,
       pin: await wrapWithPin(raw, pin, this.pinIterations),
-      faceId: null,
       autoLock: DEFAULT_AUTO_LOCK,
       failed: 0,
       retryAt: 0
@@ -133,10 +122,10 @@ export class Session {
     return this.status()
   }
 
-  /** Turns the lock off after the PIN or Face ID: the same data key goes back to the browser's keeping. */
-  async disable(proof: LockProof): Promise<LockStatus> {
+  /** Turns the lock off after the PIN: the same data key goes back to the browser's keeping. */
+  async disable(pin: string): Promise<LockStatus> {
     const journal = this.openJournal()
-    const raw = await this.prove(proof)
+    const raw = await this.checkPin(pin)
     await this.keys.save(await importDataKey(raw))
     this.record = null
     journal.raw?.fill(0)
@@ -149,22 +138,6 @@ export class Session {
     if (!isPin(next)) throw new DomainError('VALIDATION', `The PIN must be ${PIN_LENGTH} digits`)
     const raw = await this.checkPin(current)
     await this.store({ ...this.lockRecord(), pin: await wrapWithPin(raw, next, this.pinIterations) })
-    return this.status()
-  }
-
-  /** Face ID on: the key is also wrapped by the secret the new passkey returned after Face ID. */
-  async enableFaceId(credentialId: Bytes, prfSalt: Bytes, secret: Bytes): Promise<LockStatus> {
-    const journal = this.openJournal()
-    const record = this.lockRecord()
-    if (!journal.raw) throw new DomainError('INTERNAL', 'The key is not available')
-    if (secret.byteLength < 32) throw new DomainError('VALIDATION', 'Face ID did not return a usable key')
-    await this.store({ ...record, faceId: await wrapWithSecret(journal.raw, secret, credentialId, prfSalt) })
-    return this.status()
-  }
-
-  async disableFaceId(): Promise<LockStatus> {
-    this.openJournal()
-    await this.store({ ...this.lockRecord(), faceId: null })
     return this.status()
   }
 
@@ -192,13 +165,20 @@ export class Session {
     return this.record
   }
 
+  /**
+   * Face ID was removed (T22). A lock record from v0.3.0 may still hold the data key wrapped by a passkey
+   * secret: drop that copy, so only the PIN opens the journal.
+   */
+  private async withoutFaceId(record: LockRecord): Promise<LockRecord> {
+    if (!('faceId' in record)) return record
+    const { faceId: _removed, ...rest } = record as LockRecord & { faceId?: unknown }
+    await this.keys.save(rest)
+    return rest
+  }
+
   private async store(record: LockRecord): Promise<void> {
     await this.keys.save(record)
     this.record = record
-  }
-
-  private prove(proof: LockProof): Promise<Bytes> {
-    return 'pin' in proof ? this.checkPin(proof.pin) : this.checkSecret(proof.secret)
   }
 
   /** The raw key for a right PIN; a wrong one is counted and, after four, makes the next try wait. */
@@ -216,13 +196,6 @@ export class Session {
       throw new DomainError('WRONG_PIN', 'Wrong PIN')
     }
     if (record.failed > 0) await this.store({ ...record, failed: 0, retryAt: 0 })
-    return raw
-  }
-
-  private async checkSecret(secret: Bytes): Promise<Bytes> {
-    const faceId = this.lockRecord().faceId
-    const raw = faceId ? await unwrapWithSecret(faceId, secret) : null
-    if (!raw) throw new DomainError('VALIDATION', 'Face ID did not unlock Tide. Enter your PIN.')
     return raw
   }
 }

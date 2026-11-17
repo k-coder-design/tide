@@ -66,7 +66,7 @@ export function SettingsScreen({
       </section>
 
       <p className="footnote">
-        Your journal stays on this iPhone and is stored encrypted. Nothing is sent anywhere. With App lock on, it opens only with your PIN or Face ID. Deleting Tide from the Home Screen deletes the
+        Your journal stays on this iPhone and is stored encrypted. Nothing is sent anywhere. With App lock on, it opens only with your PIN. Deleting Tide from the Home Screen deletes the
         journal — backups arrive in a coming update.
       </p>
 

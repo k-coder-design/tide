@@ -26,6 +26,16 @@ export function addDays(key: string, days: number): string {
 export const longDate = (key: string): string =>
   parseDateKey(key).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })
 
+/** "Tuesday" */
+export const weekdayName = (key: string): string => parseDateKey(key).toLocaleDateString('en-GB', { weekday: 'long' })
+
+/** "17 November", with the year when it is not this year. */
+export function dayMonth(key: string): string {
+  const date = parseDateKey(key)
+  const sameYear = date.getFullYear() === new Date().getFullYear()
+  return date.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', ...(sameYear ? {} : { year: 'numeric' }) })
+}
+
 /** "Tue 17 Nov", with the year when it is not this year. */
 export function shortDate(key: string): string {
   const date = parseDateKey(key)

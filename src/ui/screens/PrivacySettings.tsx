@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import type { LockProof, LockStatus } from '../../shared/types'
+import type { LockStatus } from '../../shared/types'
 import { Icon } from '../components/Icon'
 import { PinPad } from '../components/PinPad'
 import { Sheet } from '../components/controls'
 import { api } from '../lib/client'
-import { FaceIdError, createFaceIdKey, faceIdSecret } from '../lib/faceId'
 
 const PIN_LENGTH = 4
 const AUTO_LOCK: ReadonlyArray<{ value: LockStatus['autoLock']; label: string }> = [
@@ -16,32 +15,13 @@ const AUTO_LOCK: ReadonlyArray<{ value: LockStatus['autoLock']; label: string }>
 
 type Open = 'enable' | 'disable' | 'change' | 'autolock' | null
 
-/** Settings → Privacy (T7, T21): App lock, Face ID, Auto-lock, Change PIN — as on the Settings mockup. */
+/** Settings → Privacy (T7, T21, T22): App lock, Auto-lock, Change PIN. */
 export function PrivacySettings({ status, onStatus }: { status: LockStatus; onStatus: (status: LockStatus) => void }) {
   const [open, setOpen] = useState<Open>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
   const close = () => setOpen(null)
   const done = (next: LockStatus) => {
     onStatus(next)
     setOpen(null)
-  }
-
-  const toggleFaceId = async () => {
-    setError(null)
-    setBusy(true)
-    try {
-      if (status.faceId) {
-        onStatus(await api('lock.disableFaceId'))
-      } else {
-        const { credentialId, prfSalt, secret } = await createFaceIdKey()
-        onStatus(await api('lock.enableFaceId', credentialId, prfSalt, secret))
-      }
-    } catch (reason) {
-      if (!(reason instanceof FaceIdError && reason.cancelled)) setError(reason instanceof Error ? reason.message : 'Could not change Face ID')
-    } finally {
-      setBusy(false)
-    }
   }
 
   return (
@@ -57,13 +37,6 @@ export function PrivacySettings({ status, onStatus }: { status: LockStatus; onSt
         </div>
         {status.enabled && (
           <>
-            <div className="row">
-              <span className="row-text">
-                <span className="row-title">Face ID</span>
-                <span className="row-sub">Instead of typing the PIN</span>
-              </span>
-              <Switch label="Face ID" on={status.faceId !== null} disabled={busy} onChange={() => void toggleFaceId()} />
-            </div>
             <button type="button" className="row" onClick={() => setOpen('autolock')}>
               <span className="row-text">
                 <span className="row-title">Auto-lock</span>
@@ -80,10 +53,9 @@ export function PrivacySettings({ status, onStatus }: { status: LockStatus; onSt
           </>
         )}
       </div>
-      {error && <p className="error-text">{error}</p>}
 
       {open === 'enable' && <EnableSheet onClose={close} onDone={done} />}
-      {open === 'disable' && <DisableSheet status={status} onClose={close} onDone={done} />}
+      {open === 'disable' && <DisableSheet onClose={close} onDone={done} />}
       {open === 'change' && <ChangePinSheet onClose={close} onDone={done} />}
       {open === 'autolock' && (
         <Sheet label="Auto-lock" onClose={close}>
@@ -130,14 +102,14 @@ function SheetHeader({ title, onClose }: { title: string; onClose: () => void })
 }
 
 /** A PIN step inside a sheet: a prompt, the keypad and an error line. */
-function PinStep({ prompt, note, error, busy, onPin, onFaceId }: { prompt: string; note?: string; error: string | null; busy: boolean; onPin: (pin: string) => void; onFaceId?: () => void }) {
+function PinStep({ prompt, note, error, busy, onPin }: { prompt: string; note?: string; error: string | null; busy: boolean; onPin: (pin: string) => void }) {
   return (
     <div className="sheet-body pin-step">
       <p className="pin-prompt">{prompt}</p>
       <p className={error ? 'error-text' : 'muted small'} role="status">
         {error ?? note ?? ' '}
       </p>
-      <PinPad length={PIN_LENGTH} disabled={busy} onComplete={onPin} onFaceId={onFaceId} />
+      <PinPad length={PIN_LENGTH} disabled={busy} onComplete={onPin} />
     </div>
   )
 }
@@ -186,21 +158,20 @@ function EnableSheet({ onClose, onDone }: { onClose: () => void; onDone: (status
   )
 }
 
-/** Turning the lock off asks for the PIN or Face ID first (T7). */
-function DisableSheet({ status, onClose, onDone }: { status: LockStatus; onClose: () => void; onDone: (status: LockStatus) => void }) {
+/** Turning the lock off asks for the PIN first (T7). */
+function DisableSheet({ onClose, onDone }: { onClose: () => void; onDone: (status: LockStatus) => void }) {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
-  const prove = async (proof: () => Promise<LockProof>) => {
+  const onPin = async (pin: string) => {
     setBusy(true)
     try {
-      onDone(await api('lock.disable', await proof()))
+      onDone(await api('lock.disable', pin))
     } catch (reason) {
-      if (!(reason instanceof FaceIdError && reason.cancelled)) setError(message(reason))
+      setError(message(reason))
     } finally {
       setBusy(false)
     }
   }
-  const faceId = status.faceId
   return (
     <Sheet label="Turn off App lock" onClose={onClose}>
       <SheetHeader title="Turn off App lock" onClose={onClose} />
@@ -209,8 +180,7 @@ function DisableSheet({ status, onClose, onDone }: { status: LockStatus; onClose
         note="Tide will open without a PIN. The journal stays encrypted on the phone."
         error={error}
         busy={busy}
-        onPin={(pin) => void prove(async () => ({ pin }))}
-        onFaceId={faceId ? () => void prove(async () => ({ secret: await faceIdSecret(faceId.credentialId, faceId.prfSalt) })) : undefined}
+        onPin={(pin) => void onPin(pin)}
       />
     </Sheet>
   )

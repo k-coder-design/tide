@@ -8,7 +8,7 @@
  *
  * The data key is random (256 bits) and never stored in the clear. With the app lock off (T7,
  * the default) it is a non-extractable WebCrypto key kept by the browser (KeyStore → IndexedDB);
- * with the lock on, the store holds a LockRecord instead — the key wrapped by the PIN and Face ID (lock.ts).
+ * with the lock on, the store holds a LockRecord instead — the key wrapped by the PIN (lock.ts).
  */
 import { isLockRecord, type LockRecord } from './lock'
 
@@ -104,7 +104,7 @@ export class Vault {
     return Vault.withKey(slots, stored)
   }
 
-  /** Opens the saves with a known key — the browser's, or the one the PIN or Face ID just unwrapped. */
+  /** Opens the saves with a known key — the browser's, or the one the PIN just unwrapped. */
   static async withKey(slots: SlotStore, key: CryptoKey): Promise<Opened> {
     const present = await presentSlots(slots)
     const opened = (await Promise.all(present.map((bytes) => unseal(key, bytes)))).filter((slot) => slot !== null)

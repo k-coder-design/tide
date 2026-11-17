@@ -9,27 +9,48 @@ import { indexedDbKeys, opfsSlots } from './browserStorage'
 /**
  * The Tide core in a Web Worker: SQLite WebAssembly in memory, loaded from the encrypted image
  * and stored encrypted again after every change (T3, T7, T17). With the app lock on it starts locked
- * and opens the journal only after the PIN or Face ID (T21). Calls come from src/ui/lib/client.ts.
+ * and opens the journal only after the PIN (T21). Calls come from src/ui/lib/client.ts.
  */
 const scope = self as unknown as {
   addEventListener(type: 'message', listener: (event: MessageEvent<{ id: number; method: unknown; args: unknown[] }>) => void): void
   postMessage(message: unknown): void
 }
 
-const ready = sqlite3InitModule().then((sqlite3) => Session.start(sqlite3, opfsSlots(), indexedDbKeys()))
+const START_TRIES = 5
+
+/**
+ * Opens storage, retrying a few times: right after a reload the previous page's Worker may still hold the save
+ * files for a moment. Retrying is safe — nothing is written until the journal has opened. A missing key or
+ * undecryptable saves (StorageError) are not retried: they do not get better by waiting.
+ */
+async function start(): Promise<Session> {
+  const sqlite3 = await sqlite3InitModule()
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await Session.start(sqlite3, opfsSlots(), indexedDbKeys())
+    } catch (error) {
+      if (error instanceof StorageError) throw error
+      console.warn(`Tide could not open storage (try ${attempt} of ${START_TRIES})`, error)
+      if (attempt >= START_TRIES) {
+        const reason = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
+        throw new StorageError(`Tide could not open its storage (${reason}). Close Tide fully and open it again.`)
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150 * 2 ** attempt))
+    }
+  }
+}
+
+const ready = start()
 
 type LockCalls = { [M in LockMethod]: (session: Session, ...args: Parameters<LockContract[M]>) => LockStatus | Promise<LockStatus> }
 
 const LOCK_CALLS: LockCalls = {
   'lock.status': (s) => s.status(),
   'lock.unlockWithPin': (s, pin) => s.unlockWithPin(pin),
-  'lock.unlockWithFaceId': (s, secret) => s.unlockWithFaceId(secret),
   'lock.lock': (s) => s.lock(),
   'lock.enable': (s, pin) => s.enable(pin),
-  'lock.disable': (s, proof) => s.disable(proof),
+  'lock.disable': (s, pin) => s.disable(pin),
   'lock.changePin': (s, current, next) => s.changePin(current, next),
-  'lock.enableFaceId': (s, credentialId, prfSalt, secret) => s.enableFaceId(credentialId, prfSalt, secret),
-  'lock.disableFaceId': (s) => s.disableFaceId(),
   'lock.setAutoLock': (s, minutes) => s.setAutoLock(minutes)
 }
 

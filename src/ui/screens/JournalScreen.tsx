@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { JournalDay, JournalFilter, JournalPage, MonthDay } from '../../shared/types'
 import { Icon } from '../components/Icon'
-import { CheckinRow, EntryRow, Segmented, useLoad } from '../components/controls'
+import { CheckinRow, EntryRow, KindBadge, Segmented, useLoad } from '../components/controls'
 import { api } from '../lib/client'
 import { dayHeading, monthCells, monthKey, monthTitle, shiftMonth, today as todayKey } from '../lib/dates'
 import type { Navigate } from '../navigation'
@@ -194,6 +194,16 @@ function JournalCalendar({ version, navigate }: { version: number; navigate: Nav
           <div className="card list-card">
             <p className="empty-row">Nothing recorded on this day</p>
           </div>
+        )}
+        {day && day.desire === null && (
+          <button type="button" className="card rate-day" onClick={() => navigate({ type: 'desire', date: selected })}>
+            <KindBadge icon="desire" tone="teal" />
+            <span className="row-text">
+              <span className="row-title">Desire</span>
+              <span className="row-sub">Not rated — tap to rate this day</span>
+            </span>
+            <Icon name="forward" size={14} color="var(--faint)" strokeWidth={2} />
+          </button>
         )}
       </section>
     </>

@@ -1,12 +1,10 @@
 /**
- * The optional app lock (T7, T21): the data key wrapped by the PIN and, if turned on, by Face ID.
+ * The optional app lock (T7, T21, T22): the data key wrapped by the PIN.
  *
  * With the lock on, the data key exists in the clear only in the Worker's memory while Tide is open.
- * On the phone it is kept as 32 random bytes encrypted (AES-GCM) twice over, independently:
- * - with a key derived from the PIN (PBKDF2-SHA256, 600 000 iterations, random salt);
- * - with a key derived (HKDF-SHA256) from the secret a passkey returns through the WebAuthn PRF extension
- *   after Face ID — so Face ID unlocks Tide without the PIN being stored anywhere.
- * A wrong PIN is detected by the authenticated decryption failing; nothing else reveals it.
+ * On the phone it is kept as 32 random bytes encrypted (AES-GCM) with a key derived from the PIN
+ * (PBKDF2-SHA256, 600 000 iterations, random salt). A wrong PIN is detected by the authenticated
+ * decryption failing; nothing else reveals it.
  */
 
 export const PIN_LENGTH = 4
@@ -21,7 +19,6 @@ export type Bytes = Uint8Array<ArrayBuffer>
 
 const KEY_BYTES = 32
 const IV_BYTES = 12
-const FACE_ID_INFO = new TextEncoder().encode('tide face id key v1')
 
 interface Wrapped {
   iv: Bytes
@@ -33,18 +30,11 @@ export interface PinWrap extends Wrapped {
   iterations: number
 }
 
-export interface FaceIdWrap extends Wrapped {
-  /** The passkey that unlocks Tide and the PRF input it is asked with. */
-  credentialId: Bytes
-  prfSalt: Bytes
-}
-
 /** Stored next to the encrypted journal (IndexedDB) instead of the plain key when the lock is on. */
 export interface LockRecord {
   kind: 'lock'
   version: 1
   pin: PinWrap
-  faceId: FaceIdWrap | null
   autoLock: AutoLock
   /** Wrong PINs in a row and the moment (ms since 1970) the next try is allowed. */
   failed: number
@@ -72,14 +62,6 @@ async function pinKey(pin: string, salt: Bytes, iterations: number): Promise<Cry
   ])
 }
 
-async function secretKey(secret: Bytes, prfSalt: Bytes): Promise<CryptoKey> {
-  const base = await crypto.subtle.importKey('raw', secret, 'HKDF', false, ['deriveKey'])
-  return crypto.subtle.deriveKey({ name: 'HKDF', hash: 'SHA-256', salt: prfSalt, info: FACE_ID_INFO }, base, { name: 'AES-GCM', length: 256 }, false, [
-    'encrypt',
-    'decrypt'
-  ])
-}
-
 async function wrap(key: CryptoKey, raw: Bytes): Promise<Wrapped> {
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
   return { iv, data: new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, raw)) }
@@ -102,14 +84,6 @@ export async function wrapWithPin(raw: Bytes, pin: string, iterations = PIN_ITER
 /** The raw data key, or null when the PIN is wrong. */
 export async function unwrapWithPin(pinWrap: PinWrap, pin: string): Promise<Bytes | null> {
   return unwrap(await pinKey(pin, pinWrap.salt, pinWrap.iterations), pinWrap)
-}
-
-export async function wrapWithSecret(raw: Bytes, secret: Bytes, credentialId: Bytes, prfSalt: Bytes): Promise<FaceIdWrap> {
-  return { credentialId, prfSalt, ...(await wrap(await secretKey(secret, prfSalt), raw)) }
-}
-
-export async function unwrapWithSecret(faceId: FaceIdWrap, secret: Bytes): Promise<Bytes | null> {
-  return unwrap(await secretKey(secret, faceId.prfSalt), faceId)
 }
 
 /**

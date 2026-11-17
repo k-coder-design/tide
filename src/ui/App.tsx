@@ -4,7 +4,6 @@ import type { LockStatus, Settings } from '../shared/types'
 import { Icon, type IconName } from './components/Icon'
 import { useLoad } from './components/controls'
 import { api, onLocked } from './lib/client'
-import { faceIdInProgress } from './lib/faceId'
 import type { Overlay, Tab } from './navigation'
 import { DesireSheet } from './screens/DesireSheet'
 import { EntryDetail } from './screens/EntryDetail'
@@ -74,7 +73,6 @@ function useAutoLock(lock: LockStatus | undefined, lockNow: () => void): void {
     if (!active) return
     let hiddenAt: number | null = null
     const onChange = () => {
-      if (faceIdInProgress()) return
       if (document.visibilityState === 'hidden') {
         hiddenAt = Date.now()
         if (minutes === 0) lockNow()
@@ -95,7 +93,7 @@ function useAutoLock(lock: LockStatus | undefined, lockNow: () => void): void {
 function usePrivacyCover(): void {
   useEffect(() => {
     const root = document.documentElement
-    const cover = () => !faceIdInProgress() && root.classList.add('covered')
+    const cover = () => root.classList.add('covered')
     const uncover = () => root.classList.remove('covered')
     const onVisibility = () => (document.visibilityState === 'hidden' ? cover() : uncover())
     document.addEventListener('visibilitychange', onVisibility)

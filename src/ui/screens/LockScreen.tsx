@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { LockStatus } from '../../shared/types'
 import { PinPad } from '../components/PinPad'
 import { ApiError, api } from '../lib/client'
-import { FaceIdError, faceIdSecret } from '../lib/faceId'
 
 const PIN_LENGTH = 4
 
-/** Screen 1 on the canvas: shown while Tide is locked (T21). Face ID, if on, is tried by itself first. */
+/** Screen 1 on the canvas: shown while Tide is locked (T21, T22). */
 export function LockScreen({ status, onUnlocked }: { status: LockStatus; onUnlocked: (status: LockStatus) => void }) {
   const [message, setMessage] = useState<string | null>(null)
   const [retryAt, setRetryAt] = useState<number | null>(status.retryAt)
@@ -14,46 +13,17 @@ export function LockScreen({ status, onUnlocked }: { status: LockStatus; onUnloc
   const now = useNow(retryAt !== null)
   const waiting = retryAt !== null && retryAt > now
 
-  const fail = useCallback((error: unknown) => {
-    if (error instanceof ApiError && error.error.code === 'WAIT') {
-      void api('lock.status').then((s) => setRetryAt(s.retryAt))
-    }
-    if (error instanceof FaceIdError && error.cancelled) return setMessage(null)
-    setMessage(error instanceof Error ? error.message : 'Could not unlock')
-  }, [])
-
-  const unlockWithPin = async (pin: string) => {
+  const unlock = async (pin: string) => {
     setBusy(true)
     try {
       onUnlocked(await api('lock.unlockWithPin', pin))
     } catch (error) {
-      fail(error)
+      if (error instanceof ApiError && error.error.code === 'WAIT') setRetryAt((await api('lock.status')).retryAt)
+      setMessage(error instanceof Error ? error.message : 'Could not unlock')
     } finally {
       setBusy(false)
     }
   }
-
-  const faceId = status.faceId
-  const unlockWithFaceId = useCallback(async () => {
-    if (!faceId) return
-    setBusy(true)
-    try {
-      const secret = await faceIdSecret(faceId.credentialId, faceId.prfSalt)
-      onUnlocked(await api('lock.unlockWithFaceId', secret))
-    } catch (error) {
-      fail(error)
-    } finally {
-      setBusy(false)
-    }
-  }, [faceId, fail, onUnlocked])
-
-  // Face ID by itself once, when the screen appears; if iOS wants a tap first, the Face ID key is there.
-  const tried = useRef(false)
-  useEffect(() => {
-    if (tried.current || !faceId) return
-    tried.current = true
-    void unlockWithFaceId()
-  }, [faceId, unlockWithFaceId])
 
   return (
     <main className="lock-screen">
@@ -69,7 +39,7 @@ export function LockScreen({ status, onUnlocked }: { status: LockStatus; onUnloc
           {waiting ? `Too many wrong PINs. Try again in ${countdown(retryAt - now)}.` : (message ?? 'Enter your PIN')}
         </p>
       </div>
-      <PinPad length={PIN_LENGTH} disabled={busy || waiting} onComplete={(pin) => void unlockWithPin(pin)} onFaceId={faceId ? () => void unlockWithFaceId() : undefined} />
+      <PinPad length={PIN_LENGTH} disabled={busy || waiting} onComplete={(pin) => void unlock(pin)} />
     </main>
   )
 }

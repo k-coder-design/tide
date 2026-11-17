@@ -4,7 +4,7 @@ import { RatingRow, Sheet, useLoad } from '../components/controls'
 import { api } from '../lib/client'
 import { longDate } from '../lib/dates'
 
-/** Desire for any past day — opened from a check-in in the journal. */
+/** Desire for any past day — opened from a check-in or an unrated day in the journal (T23). */
 export function DesireSheet({ date, onClose, onSaved }: { date: string; onClose: () => void; onSaved: () => void }) {
   const { data } = useLoad(() => api('journal.day', date), [date])
   const [value, setValue] = useState<number | null | undefined>(undefined)
