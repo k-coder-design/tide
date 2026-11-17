@@ -11,6 +11,6 @@ A private iPhone Home Screen web app (React + Vite + TypeScript) for tracking li
 ## Rules
 
 - The data is highly sensitive: it stays on the device and is stored encrypted. Never add analytics, telemetry, external fonts or any network requests with user data.
-- Everything in the repository is in English: code, comments, docs, test names.
+- Everything in the repository is in English: code, comments, docs, test names. Specs and plans (PLAN.md, `docs/`) are written in English too, even when the discussion is in Russian, and live in this repository on GitHub.
 - Business rules live only in the domain layer; the interface calls it, never the database directly (as in Recallo).
 - After user-visible changes, update PLAN.md (phase result, decision Tn).

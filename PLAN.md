@@ -14,6 +14,7 @@ A private iPhone app for tracking libido dynamics: partnered sex, other sexual a
 | T6 | Factors: menstrual cycle and medications. A medication marked as a contraceptive is shown automatically on sex events within its course — computed, not stored per event. | 17.11.2026 |
 | T7 | Privacy: PIN / Face ID lock, neutral icon and name, neutral reminders, encrypted database. | 17.11.2026 |
 | T8 | Interface language — English. | 17.11.2026 |
+| T9 | **Public GitHub repository** `k-coder-design/tide`, as Recallo — free GitHub Pages hosting later. Code and specs are public; user data never leaves the device. Specs are kept in English in the repository. | 17.11.2026 |
 
 ## Web app limits on iPhone (affect phases 3 and 7)
 
