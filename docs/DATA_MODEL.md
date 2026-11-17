@@ -78,18 +78,27 @@ Each part is optional: a day may have only desire, only flow, or both.
 | `tag` | TEXT NOT NULL | from a fixed list in code: `cramps` · `headache` · `bloating` · `breast_tenderness` · `acne` · `low_mood` · `irritability` · `fatigue` |
 | | | PRIMARY KEY (`date`, `tag`) |
 
-### `pill_log` — one row per medication per day (phase 6)
+### `pill_log` — one row per dose (phase 6)
+
+Built for changing time zones (T15): what matters is the **real time between doses**, not the clock on the wall. A dose is stored as an absolute moment, so a flight never makes an interval look longer or shorter than it was.
 
 | Column | Type | Notes |
 | --- | --- | --- |
+| `id` | TEXT PK | UUID — not (medication, date): after a flight two doses can fall on one local date, or none |
 | `medication_id` | TEXT NOT NULL → `medications.id` | |
-| `date` | TEXT NOT NULL | local date |
 | `status` | TEXT NOT NULL | `taken` · `missed` |
-| `taken_at` | TEXT NULL | local time `HH:MM` when taken |
+| `taken_at` | TEXT NULL | absolute moment in UTC, ISO 8601 (`2026-11-17T20:05:00Z`); NULL for `missed` |
+| `time_zone` | TEXT NOT NULL | IANA zone of the phone when logged (`Europe/Madrid`) — to show the local time it was taken |
+| `local_date` | TEXT NOT NULL | local date in that zone — for the calendar; for `missed`, the day the dose was missed |
+| `note` | TEXT NULL | |
 | `updated_at` | TEXT NOT NULL | |
-| | | PRIMARY KEY (`medication_id`, `date`) |
 
-A pill is **late** when `taken_at` is later than `medications.scheduled_time` plus `medications.delay_window_hours`. Computed, not stored; Tide only flags it and gives no medical advice.
+Computed, not stored (Tide only shows numbers and flags, gives no medical advice):
+
+- **Interval** — time since the previous `taken` dose of the same medication, in hours and minutes ("25 h 10 min").
+- **Late** — interval longer than `medications.interval_hours` + `medications.delay_window_hours`.
+- **Next dose** — previous dose + `interval_hours`, with the latest time + `delay_window_hours`, shown in the phone's **current** zone ("Next pill 21:00 · latest 00:00"). After a flight it is already converted to the new local time.
+- **Zone change** — a dose logged in a different zone from the previous one shows both local times ("taken 08:05 Bangkok · 20:05 previous dose in Madrid").
 
 ### `medications` — phase 6
 
@@ -99,7 +108,7 @@ A pill is **late** when `taken_at` is later than `medications.scheduled_time` pl
 | `name` | TEXT NOT NULL | e.g. a contraceptive or an antidepressant |
 | `is_contraceptive` | INTEGER NOT NULL DEFAULT 0 | 1 — shown automatically on sex events within the course (see `sex_details`) |
 | `regimen` | TEXT NULL | `continuous` · `21/7` · `24/4` · `other` — for contraceptives |
-| `scheduled_time` | TEXT NULL | usual time `HH:MM`; with it the pill appears in the daily check-in |
+| `interval_hours` | REAL NULL | time between doses, usually 24; with it the pill appears in the daily check-in and the pill log |
 | `delay_window_hours` | REAL NULL | allowed delay from the leaflet, set by the user |
 | `started_on` | TEXT NOT NULL | `YYYY-MM-DD` |
 | `ended_on` | TEXT NULL | still taking — NULL |
@@ -124,4 +133,4 @@ Same stack as Recallo: Mobile — SQLite WebAssembly in a Web Worker, the core r
 ## Merging backups (phase 4)
 
 - *Replace* — the backup becomes the whole database.
-- *Merge* — rows are matched by `id` (`date` for `daily_checkins`, (`medication_id`, `date`) for `pill_log`, (`date`, `tag`) for `day_symptoms`); a missing row is added, an existing one is replaced only if the backup's `updated_at` is newer. Deletions are not carried over by a merge (a deleted event may come back from an older backup) — acceptable for moving to a new phone, where *Replace* is the usual choice.
+- *Merge* — rows are matched by `id` (`date` for `daily_checkins`, (`date`, `tag`) for `day_symptoms`); a missing row is added, an existing one is replaced only if the backup's `updated_at` is newer. Deletions are not carried over by a merge (a deleted event may come back from an older backup) — acceptable for moving to a new phone, where *Replace* is the usual choice.
