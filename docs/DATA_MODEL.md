@@ -1,6 +1,6 @@
 # Tide — data model (draft for review)
 
-Status: **approved, phase 0** (17.11.2026). Nothing is implemented yet; the tables appear in phase 2 (core), `cycle_starts` and `medications` in phase 6 — together with the automatic contraceptive display on sex events.
+Status: **approved, phase 0** (17.11.2026). Nothing is implemented yet; the tables appear in phase 2 (core), `medications` in phase 6 — together with the automatic contraceptive display on sex events.
 
 ## What the app measures
 
@@ -59,12 +59,6 @@ Hormonal contraception is **not** stored per event: it comes from `medications`.
 | `desire` | INTEGER NOT NULL | 1–10 |
 | `note` | TEXT NULL | |
 | `updated_at` | TEXT NOT NULL | |
-
-### `cycle_starts` — phase 6
-
-| Column | Type | Notes |
-| --- | --- | --- |
-| `date` | TEXT PK | first day of a period; phases are computed, not stored |
 
 ### `medications` — phase 6
 
