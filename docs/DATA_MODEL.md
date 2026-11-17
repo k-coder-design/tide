@@ -11,7 +11,7 @@ Libido dynamics as three streams, plus the cycle:
 | Partnered activity | `events` with `kind = 'sex'` | count per week / month |
 | Other activity | `events` with `kind` in `masturbation`, `dream`, `fantasy` | count per week / month, split by kind |
 | Desire | `daily_checkins.desire` (1–10, once a day) | line with a moving average |
-| Bleeding | `daily_checkins.flow` | bleeding days per month, episodes, heat map |
+| Bleeding | `daily_checkins.flow` | bleeding and spotting days per month, bleeding episodes and cycles, heat map |
 | Pills | `pill_log` | taken / late / missed |
 
 `fantasy` is an optional event for a notable sexual thought or fantasy; everyday background desire is the daily check-in, not events.
@@ -66,7 +66,9 @@ Each part is optional: a day may have only desire, only flow, or both.
 | `note` | TEXT NULL | |
 | `updated_at` | TEXT NOT NULL | |
 
-**Bleeding episodes** are computed, not stored: consecutive days with flow `spotting` or heavier, where gaps of up to 2 days (`none` or not recorded) do not break the episode. An episode has a start, an end (none while it is ongoing), a length in days and its strongest flow; its **cycle** is the number of days from its start to the next episode's start (none for the latest). Imported and Tide-recorded days form episodes the same way.
+**Bleeding and spotting are different (T18).** *Bleeding* — flow `light`, `medium`, `heavy` or `unspecified` (a Health menstrual-flow record without a level) — forms episodes and starts cycles. *Spotting* never starts an episode or a cycle; spotting days are counted on their own.
+
+**Bleeding episodes** are computed, not stored: consecutive bleeding days, where gaps of up to 2 days (`spotting`, `none` or not recorded) do not break the episode. Spotting before the first or after the last bleeding day is not part of the episode: the episode starts on its first bleeding day and ends on its last one. An episode has a start, an end (none while it is ongoing), a length in days, its strongest flow and the number of spotting days next to it (within 2 days before, inside, or within 2 days after); its **cycle** is the number of days from its start to the next episode's start (none for the latest). Spotting days that belong to no episode are shown as spotting between episodes. Imported and Tide-recorded days follow the same rules.
 
 **Health import (phase 4, T12)** fills `flow` with `flow_source = 'health'`. Format checked on a real export (17.11.2026): `export.xml` (hundreds of MB) holds day records `<Record type="…" startDate="YYYY-MM-DD 12:00:00 +HHMM" …>` — one per day, at local noon, so the date part of `startDate` is the local day.
 
@@ -75,7 +77,7 @@ Each part is optional: a day may have only desire, only flow, or both.
 | `HKCategoryTypeIdentifierMenstrualFlow` | `HKCategoryValueVaginalBleedingLight` / `Medium` / `Heavy` (older exports: `HKCategoryValueMenstrualFlow…`) | `light` / `medium` / `heavy` |
 | same | `…Unspecified` | `unspecified` |
 | same | `…None` | skipped |
-| `HKCategoryTypeIdentifierIntermenstrualBleeding` | `HKCategoryValueNotApplicable` | `spotting` |
+| `HKCategoryTypeIdentifierIntermenstrualBleeding` | `HKCategoryValueNotApplicable` | `spotting` — never starts a cycle (T18) |
 
 When a day has several records the stronger flow wins. A day already recorded in Tide is never overwritten; re-importing the same export changes nothing.
 
