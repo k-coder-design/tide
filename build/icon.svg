@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 120 120">
+  <!-- Tide app icon C (T10): a teal wave with a small terracotta moon on night blue. iOS rounds the corners. -->
+  <rect width="120" height="120" fill="#0E1719"/>
+  <g transform="translate(22 22) scale(3.1667)" fill="none" stroke="#5FB3BC" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M2 13c2.5 0 2.5-3 5-3s2.5 3 5 3 2.5-3 5-3 2.5 3 5 3"/>
+    <circle cx="18" cy="6" r="1.6" fill="#E8987E" stroke="none"/>
+  </g>
+</svg>

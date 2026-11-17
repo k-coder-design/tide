@@ -1,6 +1,6 @@
 # Tide — data model (draft for review)
 
-Status: **approved, phase 0** (17.11.2026); cycle section added the same day (T11–T13). Nothing is implemented yet; the tables appear in phase 2 (core); the flow import in phase 4; `medications`, `pill_log` and `day_symptoms` in phase 6. The cycle parts are removed if the Health import fails (T11).
+Status: **approved, phase 0** (17.11.2026); cycle section added the same day (T11–T13). Implemented in phase 2: `events`, `sex_details`, `partners`, `daily_checkins` (desire; the flow columns exist but stay empty until phases 4 and 6), `settings`, and the encrypted storage (lock off). Still to come: the flow import in phase 4; `medications`, `pill_log` and `day_symptoms` in phase 6. The cycle parts are removed if the Health import fails (T11).
 
 ## What the app measures
 
@@ -143,6 +143,7 @@ Same stack as Recallo: Mobile — SQLite WebAssembly in a Web Worker, the core r
 3. The data key is random (256 bits) and is never stored in the clear. How it is kept depends on the optional app lock (T7):
    - **Lock off** (the default): the key is a non-extractable WebCrypto key kept in IndexedDB. The file in OPFS is still encrypted, but anyone who opens Tide on the unlocked phone sees the data.
    - **Lock on**: the key is wrapped by a PIN → PBKDF2-SHA256 key, and optionally also by a passkey with the WebAuthn PRF extension, so Face ID unlocks the app (iOS 18+); the passkey never leaves the device. Turning the lock on re-wraps the key; turning it off asks for the PIN or Face ID, then goes back to the stored key.
+   - **As built (T17)**: the encrypted image goes to two OPFS files in turn (`tide-a.bin`, `tide-b.bin`), each laid out as `TIDE` · format byte · save number (8 bytes) · 12-byte IV · AES-GCM ciphertext, with the first 13 bytes authenticated as additional data. On start the newest file that decrypts wins; a file cut off mid-write fails to decrypt and the previous save is used. Saved data that cannot be decrypted stops the app with an error and is never overwritten. Code: `src/core/storage/vault.ts`, browser bindings in `src/worker/browserStorage.ts`.
 4. A backup file (phase 4) is the same database encrypted with a key from a separate **backup password**, because the device keys do not move to a new iPhone.
 
 ## Merging backups (phase 4)
