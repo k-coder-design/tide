@@ -1,16 +1,18 @@
 # Tide — data model (draft for review)
 
-Status: **approved, phase 0** (17.11.2026). Nothing is implemented yet; the tables appear in phase 2 (core), `health_flow` in phase 4, `medications` in phase 6 — together with the automatic contraceptive display on sex events.
+Status: **approved, phase 0** (17.11.2026); cycle section added the same day (T11–T13). Nothing is implemented yet; the tables appear in phase 2 (core); the flow import in phase 4; `medications`, `pill_log` and `day_symptoms` in phase 6. The cycle parts are removed if the Health import fails (T11).
 
 ## What the app measures
 
-Libido dynamics as three streams:
+Libido dynamics as three streams, plus the cycle:
 
 | Stream | Source | Typical chart |
 | --- | --- | --- |
 | Partnered activity | `events` with `kind = 'sex'` | count per week / month |
 | Other activity | `events` with `kind` in `masturbation`, `dream`, `fantasy` | count per week / month, split by kind |
 | Desire | `daily_checkins.desire` (1–10, once a day) | line with a moving average |
+| Bleeding | `daily_checkins.flow` | bleeding days per month, episodes, heat map |
+| Pills | `pill_log` | taken / late / missed |
 
 `fantasy` is an optional event for a notable sexual thought or fantasy; everyday background desire is the daily check-in, not events.
 
@@ -51,26 +53,43 @@ Hormonal contraception is **not** stored per event: it comes from `medications`.
 | `archived` | INTEGER NOT NULL DEFAULT 0 | hidden from the picker, kept in history |
 | `created_at`, `updated_at` | TEXT NOT NULL | |
 
-### `daily_checkins` — desire, at most one per day
+### `daily_checkins` — the day's check-in, at most one per day
+
+Each part is optional: a day may have only desire, only flow, or both.
 
 | Column | Type | Notes |
 | --- | --- | --- |
 | `date` | TEXT PK | local date `YYYY-MM-DD` |
-| `desire` | INTEGER NOT NULL | 1–10 |
+| `desire` | INTEGER NULL | 1–10 |
+| `flow` | TEXT NULL | `none` · `spotting` · `light` · `medium` · `heavy` · `unspecified` (only from the Health import); NULL — not recorded, which is different from `none` |
+| `flow_source` | TEXT NULL | `tide` · `health` — where the flow came from |
 | `note` | TEXT NULL | |
 | `updated_at` | TEXT NOT NULL | |
 
-### `health_flow` — imported once from Apple Health (phase 4, T12)
+**Bleeding episodes** are computed, not stored: consecutive days with flow `spotting` or heavier, where gaps of up to 2 days (`none` or not recorded) do not break the episode. An episode has a start, a length and its strongest flow.
+
+**Health import (phase 4, T12)** fills `flow` with `flow_source = 'health'`: `HKCategoryTypeIdentifierMenstrualFlow` light / medium / heavy / unspecified → the same value, `HKCategoryTypeIdentifierIntermenstrualBleeding` → `spotting` (the stronger value wins when a day has both). Health days marked "no flow" are skipped. A day already recorded in Tide is never overwritten; re-importing the same export changes nothing.
+
+### `day_symptoms` — symptom tags by day (phase 6)
 
 | Column | Type | Notes |
 | --- | --- | --- |
-| `date` | TEXT PK | local date `YYYY-MM-DD` |
-| `flow` | TEXT NULL | `unspecified` · `light` · `medium` · `heavy` — from `HKCategoryTypeIdentifierMenstrualFlow`; NULL when the day has spotting only |
-| `spotting` | INTEGER NOT NULL DEFAULT 0 | 1 — `HKCategoryTypeIdentifierIntermenstrualBleeding` that day |
+| `date` | TEXT NOT NULL | local date |
+| `tag` | TEXT NOT NULL | from a fixed list in code: `cramps` · `headache` · `bloating` · `breast_tenderness` · `acne` · `low_mood` · `irritability` · `fatigue` |
+| | | PRIMARY KEY (`date`, `tag`) |
 
-Re-importing the same export replaces the rows. Health days marked "no flow" are skipped.
+### `pill_log` — one row per medication per day (phase 6)
 
-**Pending the Health export check (PLAN.md, phase 0b):** if the import works, the full cycle section (T13) adds a daily `flow` to `daily_checkins`, a `pill_log` (date, time taken, medication), a `regimen` on `medications`, and symptom tags; `health_flow` then becomes the imported part of the same flow history. These tables are specified after the check.
+| Column | Type | Notes |
+| --- | --- | --- |
+| `medication_id` | TEXT NOT NULL → `medications.id` | |
+| `date` | TEXT NOT NULL | local date |
+| `status` | TEXT NOT NULL | `taken` · `missed` |
+| `taken_at` | TEXT NULL | local time `HH:MM` when taken |
+| `updated_at` | TEXT NOT NULL | |
+| | | PRIMARY KEY (`medication_id`, `date`) |
+
+A pill is **late** when `taken_at` is later than `medications.scheduled_time` plus `medications.delay_window_hours`. Computed, not stored; Tide only flags it and gives no medical advice.
 
 ### `medications` — phase 6
 
@@ -79,9 +98,13 @@ Re-importing the same export replaces the rows. Health days marked "no flow" are
 | `id` | TEXT PK | UUID |
 | `name` | TEXT NOT NULL | e.g. a contraceptive or an antidepressant |
 | `is_contraceptive` | INTEGER NOT NULL DEFAULT 0 | 1 — shown automatically on sex events within the course (see `sex_details`) |
+| `regimen` | TEXT NULL | `continuous` · `21/7` · `24/4` · `other` — for contraceptives |
+| `scheduled_time` | TEXT NULL | usual time `HH:MM`; with it the pill appears in the daily check-in |
+| `delay_window_hours` | REAL NULL | allowed delay from the leaflet, set by the user |
 | `started_on` | TEXT NOT NULL | `YYYY-MM-DD` |
 | `ended_on` | TEXT NULL | still taking — NULL |
 | `note` | TEXT NULL | dose changes and so on |
+| `updated_at` | TEXT NOT NULL | |
 
 ### `settings` — key/value
 
@@ -101,4 +124,4 @@ Same stack as Recallo: Mobile — SQLite WebAssembly in a Web Worker, the core r
 ## Merging backups (phase 4)
 
 - *Replace* — the backup becomes the whole database.
-- *Merge* — rows are matched by `id` (`date` for `daily_checkins`); a missing row is added, an existing one is replaced only if the backup's `updated_at` is newer. Deletions are not carried over by a merge (a deleted event may come back from an older backup) — acceptable for moving to a new phone, where *Replace* is the usual choice.
+- *Merge* — rows are matched by `id` (`date` for `daily_checkins`, (`medication_id`, `date`) for `pill_log`, (`date`, `tag`) for `day_symptoms`); a missing row is added, an existing one is replaced only if the backup's `updated_at` is newer. Deletions are not carried over by a merge (a deleted event may come back from an older backup) — acceptable for moving to a new phone, where *Replace* is the usual choice.
