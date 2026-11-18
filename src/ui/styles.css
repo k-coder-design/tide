@@ -1398,3 +1398,23 @@ html.covered body::after {
 .row-title.strong {
   font-weight: 800;
 }
+
+.steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--muted);
+}
+
+.steps code {
+  font-size: 12.5px;
+  color: var(--ink);
+  background: var(--segment);
+  border-radius: 6px;
+  padding: 1px 5px;
+  overflow-wrap: anywhere;
+}

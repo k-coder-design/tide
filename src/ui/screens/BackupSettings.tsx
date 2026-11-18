@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import type { BackupStatus, LockStatus, MergeResult, RestoreMode } from '../../shared/types'
+import type { BackupStatus, HealthImportResult, LockStatus, MergeResult, RestoreMode } from '../../shared/types'
 import { Icon } from '../components/Icon'
 import { ConfirmSheet, Segmented, Sheet, SheetHeader, Switch, useLoad } from '../components/controls'
 import { api } from '../lib/client'
@@ -10,7 +10,7 @@ const PASSWORD_MIN = 8
 export function BackupSettings({ onRestored }: { onRestored: () => void }) {
   const [version, setVersion] = useState(0)
   const { data: status } = useLoad(() => api('backup.status'), [version])
-  const [open, setOpen] = useState<'backup' | 'password' | 'restore' | null>(null)
+  const [open, setOpen] = useState<'backup' | 'password' | 'restore' | 'health' | null>(null)
   const refresh = () => setVersion((v) => v + 1)
   const close = () => {
     setOpen(null)
@@ -53,10 +53,18 @@ export function BackupSettings({ onRestored }: { onRestored: () => void }) {
           </span>
           <Icon name="forward" size={14} color="var(--faint)" strokeWidth={2} />
         </button>
+        <button type="button" className="row" onClick={() => setOpen('health')}>
+          <span className="row-text">
+            <span className="row-title">Import from Apple Health…</span>
+            <span className="row-sub">Bleeding history and contraceptive courses, once</span>
+          </span>
+          <Icon name="forward" size={14} color="var(--faint)" strokeWidth={2} />
+        </button>
       </div>
 
       {open === 'backup' && <BackupSheet onClose={close} />}
       {open === 'password' && <PasswordSheet title="Backup password" onClose={close} onDone={close} />}
+      {open === 'health' && <HealthImportSheet onClose={close} onImported={onRestored} />}
       {open === 'restore' && (
         <RestoreSheet
           onClose={close}
@@ -331,6 +339,97 @@ function RestoreSheet({ onClose, onRestored }: { onClose: () => void; onRestored
           onCancel={() => setConfirming(false)}
         />
       )}
+    </Sheet>
+  )
+}
+
+/**
+ * The one-time Apple Health import (T12, T27). The export is too large for the phone's browser, so a script on the Mac
+ * turns it into a small encrypted file; this sheet explains the steps and imports that file.
+ */
+function HealthImportSheet({ onClose, onImported }: { onClose: () => void; onImported: () => void }) {
+  const input = useRef<HTMLInputElement>(null)
+  const [file, setFile] = useState<File | null>(null)
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [result, setResult] = useState<HealthImportResult | null>(null)
+
+  const run = async () => {
+    if (!file) return
+    setBusy(true)
+    setError(null)
+    try {
+      setResult(await api('health.import', new Uint8Array(await file.arrayBuffer()), password))
+      onImported()
+    } catch (reason) {
+      setError(message(reason))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Sheet label="Import from Apple Health" onClose={onClose}>
+      <SheetHeader title="Apple Health" onClose={onClose} />
+      <div className="sheet-body">
+        {result ? (
+          <>
+            <p className="pin-prompt">Imported</p>
+            <p className="muted">
+              {plural(result.bleedingDays, 'bleeding day', 'bleeding days')}, {plural(result.spottingDays, 'spotting day', 'spotting days')} and{' '}
+              {plural(result.courses, 'contraceptive course', 'contraceptive courses')} were added.
+              {result.keptDays + result.keptCourses > 0 &&
+                ` ${plural(result.keptDays + result.keptCourses, 'item was', 'items were')} already in Tide and kept as it was.`}{' '}
+              They appear with the cycle section in a coming update.
+            </p>
+            <p className="muted small">You can now delete export.zip and the import file from the Mac and from Files.</p>
+            <button type="button" className="button primary push-bottom" onClick={onClose}>
+              Done
+            </button>
+          </>
+        ) : (
+          <>
+            <ol className="steps">
+              <li>In Health on this iPhone: your picture → Export All Health Data. AirDrop export.zip to your Mac.</li>
+              <li>
+                On the Mac, in the Tide folder: <code>npm run health-import -- ~/Downloads/export.zip</code> and choose a password.
+              </li>
+              <li>AirDrop the .tidehealth file back to this iPhone → Save to Files, then choose it below.</li>
+            </ol>
+            <input
+              ref={input}
+              type="file"
+              hidden
+              onChange={(e) => {
+                setFile(e.target.files?.[0] ?? null)
+                setError(null)
+              }}
+            />
+            <button type="button" className="card file-card file-pick" onClick={() => input.current?.click()}>
+              <Icon name="journal" size={22} color="var(--teal)" />
+              <span className="row-text">
+                <span className="row-title">{file ? file.name : 'Choose the import file'}</span>
+                <span className="row-sub">{file ? sizeText(file.size) : 'tide-health-….tidehealth'}</span>
+              </span>
+            </button>
+            <input
+              className="text-input"
+              type="password"
+              autoComplete="off"
+              aria-label="Import file password"
+              placeholder="Password chosen on the Mac"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+            <p className="muted small">Only bleeding, spotting and contraceptive courses are read. Days already recorded in Tide are never changed.</p>
+            {error && <p className="error-text">{error}</p>}
+            <button type="button" className="button primary push-bottom" disabled={!file || !password || busy} onClick={() => void run()}>
+              {busy ? 'Importing…' : 'Import'}
+            </button>
+          </>
+        )}
+      </div>
     </Sheet>
   )
 }

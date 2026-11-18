@@ -67,6 +67,25 @@ const MIGRATIONS: string[] = [
     FROM daily_checkins;
   DROP TABLE daily_checkins;
   ALTER TABLE daily_checkins_v2 RENAME TO daily_checkins;
+  `,
+  // Phase 4 (T27): medication courses, as designed in docs/DATA_MODEL.md — filled first by contraceptive courses from the
+  // Apple Health import; the screens to see and edit them arrive in phase 6.
+  `
+  CREATE TABLE medications (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    is_contraceptive INTEGER NOT NULL DEFAULT 0 CHECK (is_contraceptive IN (0, 1)),
+    regimen TEXT CHECK (regimen IN ('continuous', '21/7', '24/4', 'other')),
+    source TEXT NOT NULL DEFAULT 'tide' CHECK (source IN ('tide', 'health')),
+    usual_time_from TEXT,
+    usual_time_to TEXT,
+    interval_hours REAL,
+    delay_window_hours REAL,
+    started_on TEXT NOT NULL,
+    ended_on TEXT,
+    note TEXT,
+    updated_at TEXT NOT NULL
+  );
   `
 ]
 

@@ -79,7 +79,7 @@ Each part is optional: a day may have only desire, only flow, or both.
 | same | `…None` | skipped |
 | `HKCategoryTypeIdentifierIntermenstrualBleeding` | `HKCategoryValueNotApplicable` | `spotting` — never starts a cycle (T18) |
 
-When a day has several records the stronger flow wins. A day already recorded in Tide is never overwritten; re-importing the same export changes nothing.
+When a day has several records the stronger flow wins. A day already recorded in Tide is never overwritten; re-importing the same export changes nothing. As built (T27): `scripts/health-import.mjs` on the Mac reads the export and writes an encrypted `.tidehealth` file (layout as a backup, magic `TIDH`) holding JSON `{ kind: "tide-health-import", version: 1, flow: [{ date, flow }], contraceptives: [{ method, startedOn, endedOn }] }`; Tide imports it in Settings → Import from Apple Health…; code `src/core/domain/healthImport.ts`.
 
 **Contraceptive courses** are imported too: each `HKCategoryTypeIdentifierContraceptive` record (`HKCategoryValueContraceptiveOral` and so on) becomes a `medications` row with `is_contraceptive = 1`, `source = 'health'`, `started_on` / `ended_on` from its dates (an end date in the year 4001 means "still taking" → NULL) and a placeholder name the user renames. Health keeps courses, **not individual doses**, so no `pill_log` rows are created for the past — that would claim every pill was taken. Instead the user sets the course's approximate usual time (`usual_time_from` / `usual_time_to`, for example 07:00–09:00); past days of the course show "usual time 07:00–09:00 · no dose log", or "time unknown" when it is not set, and are left out of interval and lateness analytics. The dose log starts on the first dose logged in Tide.
 
@@ -134,7 +134,7 @@ Computed, not stored (Tide only shows numbers and flags, gives no medical advice
 
 ### `settings` — key/value
 
-Reminder time, theme, lock timeout and similar. Schema version lives in `PRAGMA user_version` (migrations as in Recallo). Migration 1 creates the phase 2 tables; migration 2 rebuilds `daily_checkins` for the 1–5 desire scale (T19).
+Reminder time, theme, lock timeout and similar. Schema version lives in `PRAGMA user_version` (migrations as in Recallo). Migration 1 creates the phase 2 tables; migration 2 rebuilds `daily_checkins` for the 1–5 desire scale (T19); migration 3 creates `medications` (phase 4, for the Health import, T27).
 
 ## Storage and encryption (proposal)
 

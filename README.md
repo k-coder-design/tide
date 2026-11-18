@@ -1,6 +1,6 @@
 # Tide
 
-A private iPhone app for tracking libido dynamics: partnered sex, other sexual activity and daily desire. A Home Screen web app, data stays on the device. Version 0.4.0 (phase 4 — backups).
+A private iPhone app for tracking libido dynamics: partnered sex, other sexual activity and daily desire. A Home Screen web app, data stays on the device. Version 0.4.1 (phase 4 — backups and the Apple Health import).
 
 Plan: [PLAN.md](PLAN.md). Data model: [docs/DATA_MODEL.md](docs/DATA_MODEL.md). Notes for AI agents: [AGENTS.md](AGENTS.md).
 
@@ -33,6 +33,7 @@ npm run dev
 | `npm run preview` | Serve the built app |
 | `npm run typecheck` | Type-check |
 | `npm test` | Tests (Vitest): the core on the same SQLite WebAssembly as the phone, and the encrypted storage |
+| `npm run health-import -- ~/Downloads/export.zip` | One-time Apple Health import: turns a Health export into an encrypted `.tidehealth` file for Settings → Import from Apple Health… (prints only counts) |
 | `swift scripts/render-icons.swift` | Home Screen icons from `build/icon.svg` |
 
 ## Layout

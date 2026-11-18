@@ -1,6 +1,7 @@
 import type {
   BackupStatus,
   EventInput,
+  HealthImportResult,
   MergeResult,
   RestoreMode,
   LockStatus,
@@ -105,6 +106,8 @@ export interface StorageContract {
   /** The encrypted backup file, ready to save or share. */
   'backup.create'(): Uint8Array
   'backup.restore'(file: Uint8Array, password: string, mode: RestoreMode): MergeResult
+  /** The encrypted file from scripts/health-import.mjs (T27). */
+  'health.import'(file: Uint8Array, password: string): HealthImportResult
 }
 
 export type StorageMethod = keyof StorageContract

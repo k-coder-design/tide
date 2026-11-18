@@ -12,7 +12,9 @@ import type { Bytes } from './lock'
 export const BACKUP_ITERATIONS = 600_000
 export const BACKUP_PASSWORD_MIN = 8
 
-const MAGIC = [0x54, 0x49, 0x44, 0x42] // "TIDB"
+const MAGIC = [0x54, 0x49, 0x44, 0x42] // "TIDB" — a backup
+/** "TIDH" — an Apple Health import file, written on the Mac by scripts/health-import.mjs in the same layout (T27). */
+export const HEALTH_MAGIC = [0x54, 0x49, 0x44, 0x48]
 const FORMAT = 1
 const SALT_BYTES = 16
 const HEADER = 4 + 1 + 4 + SALT_BYTES
@@ -41,15 +43,19 @@ export async function deriveBackupKey(password: string, salt?: Bytes, iterations
 
 const aesKey = (raw: Bytes): Promise<CryptoKey> => crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt'])
 
-export async function sealBackup(key: BackupKey, image: Uint8Array): Promise<Bytes> {
+export function sealBackup(key: BackupKey, image: Uint8Array): Promise<Bytes> {
+  return seal(MAGIC, key, image)
+}
+
+async function seal(magic: number[], key: BackupKey, plain: Uint8Array): Promise<Bytes> {
   const header = new Uint8Array(HEADER)
-  header.set(MAGIC, 0)
+  header.set(magic, 0)
   header[4] = FORMAT
   new DataView(header.buffer).setUint32(5, key.iterations)
   header.set(key.salt, 9)
   const iv = crypto.getRandomValues(new Uint8Array(IV_BYTES))
   const cipher = new Uint8Array(
-    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: header }, await aesKey(key.raw), image as Bytes)
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: header }, await aesKey(key.raw), plain as Bytes)
   )
   const out = new Uint8Array(HEADER + IV_BYTES + cipher.byteLength)
   out.set(header, 0)
@@ -60,13 +66,30 @@ export async function sealBackup(key: BackupKey, image: Uint8Array): Promise<Byt
 
 /** The journal image inside a backup and the key that opened it; a clear error for another file or a wrong password. */
 export async function openBackup(bytes: Uint8Array, password: string): Promise<{ image: Bytes; key: BackupKey }> {
-  const file = new Uint8Array(bytes)
-  if (file.byteLength < HEADER + IV_BYTES + 16 || MAGIC.some((byte, i) => file[i] !== byte)) {
-    throw new DomainError('VALIDATION', 'This file is not a Tide backup')
+  const { plain, key } = await open(MAGIC, bytes, password, 'a Tide backup')
+  return { image: plain, key }
+}
+
+/** The JSON inside a Health import file (T27). */
+export async function openHealthFile(bytes: Uint8Array, password: string): Promise<unknown> {
+  const { plain } = await open(HEALTH_MAGIC, bytes, password, 'a Tide import file from Apple Health')
+  try {
+    return JSON.parse(new TextDecoder().decode(plain)) as unknown
+  } catch {
+    throw new DomainError('VALIDATION', 'The import file could not be read')
   }
-  if (file[4] !== FORMAT) throw new DomainError('VALIDATION', 'This backup was made by a newer Tide. Update Tide, then try again.')
+}
+
+async function open(magic: number[], bytes: Uint8Array, password: string, what: string): Promise<{ plain: Bytes; key: BackupKey }> {
+  const file = new Uint8Array(bytes)
+  if (file.byteLength < HEADER + IV_BYTES + 16 || magic.some((byte, i) => file[i] !== byte)) {
+    throw new DomainError('VALIDATION', `This file is not ${what}`)
+  }
+  if (file[4] !== FORMAT) throw new DomainError('VALIDATION', 'This file was made by a newer Tide. Update Tide, then try again.')
   const header = file.slice(0, HEADER)
   const iterations = new DataView(header.buffer).getUint32(5)
+  // A damaged header must not make the phone spin on billions of PBKDF2 rounds.
+  if (iterations < 1000 || iterations > 10_000_000) throw new DomainError('VALIDATION', 'The file is damaged')
   const salt = file.slice(9, HEADER)
   const key = await deriveBackupKey(password, salt, iterations)
   try {
@@ -75,8 +98,8 @@ export async function openBackup(bytes: Uint8Array, password: string): Promise<{
       await aesKey(key.raw),
       file.slice(HEADER + IV_BYTES)
     )
-    return { image: new Uint8Array(plain), key }
+    return { plain: new Uint8Array(plain), key }
   } catch {
-    throw new DomainError('VALIDATION', 'Wrong backup password, or the file is damaged')
+    throw new DomainError('VALIDATION', 'Wrong password, or the file is damaged')
   }
 }

@@ -51,7 +51,7 @@ describe('backups (phase 4)', () => {
     const file = await backupOf(old)
 
     const { session: fresh, slots, keys } = await start()
-    await expect(fresh.restoreBackup(file, 'wrong password', 'replace')).rejects.toThrow('Wrong backup password')
+    await expect(fresh.restoreBackup(file, 'wrong password', 'replace')).rejects.toThrow('Wrong password')
     expect(await fresh.restoreBackup(file, PASSWORD, 'replace')).toMatchObject({ entries: 1, days: 1 })
     expect(api(fresh)['today.summary'](TODAY).desire).toBe(4)
     // Saved to the phone, and the backup password came along for the next backup.

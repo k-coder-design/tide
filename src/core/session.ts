@@ -1,10 +1,11 @@
 import type { Sqlite3Static } from '@sqlite.org/sqlite-wasm'
 import type { ApiHandlers } from '../shared/api'
-import type { BackupStatus, LockStatus, MergeResult, RestoreMode } from '../shared/types'
+import type { BackupStatus, HealthImportResult, LockStatus, MergeResult, RestoreMode } from '../shared/types'
 import { SCHEMA_VERSION } from './db/migrations'
 import { openMemoryDatabase, type MemoryDatabase } from './db/wasm'
 import { BackupService } from './domain/backups'
 import { createContext } from './domain/context'
+import { HealthImportService } from './domain/healthImport'
 import { DomainError } from './domain/errors'
 import { createHandlers } from './services'
 import {
@@ -21,7 +22,7 @@ import {
   type Bytes,
   type LockRecord
 } from './storage/lock'
-import { checkBackupPassword, deriveBackupKey, openBackup, sealBackup } from './storage/backup'
+import { checkBackupPassword, deriveBackupKey, openBackup, openHealthFile, sealBackup } from './storage/backup'
 import { StorageError, Vault, type KeyStore, type Opened, type SlotStore } from './storage/vault'
 
 interface OpenJournal {
@@ -223,6 +224,16 @@ export class Session {
     return { ...contents, added: 0, updated: 0 }
   }
 
+  /** The one-time Apple Health import (T12, T27): decrypts the file made on the Mac and adds what Tide does not have yet. */
+  async importHealth(file: Uint8Array, password: string): Promise<HealthImportResult> {
+    const journal = this.openJournal()
+    if (!(file instanceof Uint8Array)) throw new DomainError('VALIDATION', 'Choose the import file')
+    const data = await openHealthFile(file, typeof password === 'string' ? password : '')
+    const result = new HealthImportService(createContext(journal.memory.db)).apply(data)
+    await this.persist()
+    return result
+  }
+
   /**
    * Delete all data (phase 4): the journal leaves memory, both save files are emptied, then the keys and the PIN
    * are forgotten. The Worker then starts a new session, as on first launch. Saves go first: cut off after them,
@@ -248,8 +259,8 @@ export class Session {
       throw new DomainError('VALIDATION', 'The backup could not be read')
     }
     const version = memory.db.pragma('user_version', { simple: true }) as number
-    const tables = memory.db.prepare("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('events', 'partners', 'daily_checkins', 'sex_details', 'settings')").pluck().get()
-    if (version > SCHEMA_VERSION || tables !== 5) {
+    const tables = memory.db.prepare("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('events', 'partners', 'daily_checkins', 'sex_details', 'settings', 'medications')").pluck().get()
+    if (version > SCHEMA_VERSION || tables !== 6) {
       memory.close()
       throw new DomainError('VALIDATION', version > SCHEMA_VERSION ? 'This backup was made by a newer Tide. Update Tide, then try again.' : 'The backup could not be read')
     }

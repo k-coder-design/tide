@@ -103,6 +103,16 @@ export interface MergeResult {
 
 export type RestoreMode = 'replace' | 'merge'
 
+/** What the Apple Health import added, and what was already in Tide and kept (T27). */
+export interface HealthImportResult {
+  bleedingDays: number
+  spottingDays: number
+  /** Days that already had a flow in Tide — never overwritten. */
+  keptDays: number
+  courses: number
+  keptCourses: number
+}
+
 /** LOCKED — Tide is locked; WRONG_PIN — the PIN did not match; WAIT — too many wrong PINs, try later. */
 export type ErrorCode = 'VALIDATION' | 'NOT_FOUND' | 'STORAGE' | 'INTERNAL' | 'LOCKED' | 'WRONG_PIN' | 'WAIT' | 'MISSING'
 

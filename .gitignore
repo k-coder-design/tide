@@ -6,3 +6,9 @@ dist/
 
 # Local Claude Code settings (paths of this Mac)
 .claude/settings.local.json
+
+# Personal data: Health exports, Health import files and backups never go into this public repository
+export.zip
+apple_health_export/
+*.tidehealth
+*.tide

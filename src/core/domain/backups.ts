@@ -105,6 +105,9 @@ export class BackupService {
       for (const row of source.prepare('SELECT * FROM daily_checkins').all() as Array<Record<string, unknown> & { date: string; updated_at: string }>) {
         count(this.upsert('daily_checkins', 'date', row))
       }
+      for (const row of source.prepare('SELECT * FROM medications').all() as Array<Record<string, unknown> & { id: string; updated_at: string }>) {
+        count(this.upsert('medications', 'id', row))
+      }
     })()
     return { added, updated, ...BackupService.contents(source) }
   }

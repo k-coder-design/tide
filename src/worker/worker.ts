@@ -63,7 +63,8 @@ type StorageCalls = {
 const STORAGE_CALLS: StorageCalls = {
   'backup.setPassword': (s, password) => s.setBackupPassword(password),
   'backup.create': (s) => s.createBackup(),
-  'backup.restore': (s, file, password, mode) => s.restoreBackup(file, password, mode)
+  'backup.restore': (s, file, password, mode) => s.restoreBackup(file, password, mode),
+  'health.import': (s, file, password) => s.importHealth(file, password)
 }
 
 const isStorageCall = (method: unknown): method is keyof StorageCalls => typeof method === 'string' && Object.hasOwn(STORAGE_CALLS, method)
