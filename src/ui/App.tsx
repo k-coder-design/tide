@@ -36,6 +36,8 @@ function applyTheme(settings: Settings | undefined): void {
 export function App() {
   const [lock, setLock] = useState<LockStatus>()
   const [startError, setStartError] = useState<{ missing: boolean; message: string } | null>(null)
+  // A new journal (after Delete all data) remounts every screen, so nothing of the old one stays in their state.
+  const [generation, setGeneration] = useState(0)
   const refresh = useCallback(
     () =>
       api('lock.status').then(setLock, (reason: unknown) =>
@@ -79,7 +81,18 @@ export function App() {
   }
   if (!lock) return <main className="app loading" aria-busy="true" />
   if (lock.locked) return <LockScreen status={lock} onUnlocked={setLock} />
-  return <Journal lock={lock} onLock={lockNow} onLockStatus={setLock} />
+  return (
+    <Journal
+      key={generation}
+      lock={lock}
+      onLock={lockNow}
+      onLockStatus={setLock}
+      onDeleted={(status) => {
+        setLock(status)
+        setGeneration((g) => g + 1)
+      }}
+    />
+  )
 }
 
 /** Locks after the chosen time in the background — or at once, when auto-lock is "Immediately". */
@@ -124,7 +137,17 @@ function usePrivacyCover(): void {
   }, [])
 }
 
-function Journal({ lock, onLock, onLockStatus }: { lock: LockStatus; onLock: () => void; onLockStatus: (status: LockStatus) => void }) {
+function Journal({
+  lock,
+  onLock,
+  onLockStatus,
+  onDeleted
+}: {
+  lock: LockStatus
+  onLock: () => void
+  onLockStatus: (status: LockStatus) => void
+  onDeleted: (status: LockStatus) => void
+}) {
   const [tab, setTab] = useState<Tab>(() => {
     const resumed = tabAfterUpdate()
     return TABS.some((t) => t.tab === resumed) ? (resumed as Tab) : 'today'
@@ -145,6 +168,10 @@ function Journal({ lock, onLock, onLockStatus }: { lock: LockStatus; onLock: () 
   useEffect(() => applyTheme(settings), [settings])
 
   const changed = useCallback(() => setVersion((v) => v + 1), [])
+  const restored = useCallback(() => {
+    changed()
+    void api('settings.get').then(setSettings)
+  }, [changed])
   const push = useCallback((overlay: Overlay) => setStack((s) => [...s, overlay]), [])
   const pop = useCallback(() => setStack((s) => s.slice(0, -1)), [])
 
@@ -164,7 +191,9 @@ function Journal({ lock, onLock, onLockStatus }: { lock: LockStatus; onLock: () 
         {tab === 'today' && <TodayScreen version={version} navigate={push} onChanged={changed} onLock={lock.enabled ? onLock : undefined} />}
         {tab === 'journal' && <JournalScreen version={version} navigate={push} />}
         {tab === 'insights' && <InsightsScreen />}
-        {tab === 'settings' && <SettingsScreen settings={settings} onSettings={setSettings} lock={lock} onLockStatus={onLockStatus} />}
+        {tab === 'settings' && (
+          <SettingsScreen settings={settings} onSettings={setSettings} lock={lock} onLockStatus={onLockStatus} onRestored={restored} onDeleted={onDeleted} />
+        )}
       </div>
       <nav className="tab-bar" aria-label="Main">
         {TABS.map((t) => (

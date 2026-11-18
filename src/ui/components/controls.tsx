@@ -106,6 +106,24 @@ export function CheckinRow({ desire, onOpen }: { desire: number; onOpen: () => v
   )
 }
 
+/** An on/off switch, as in iOS Settings. */
+export function Switch({ label, on, onChange, disabled = false }: { label: string; on: boolean; onChange: () => void; disabled?: boolean }) {
+  return <button type="button" className={`switch ${on ? 'on' : ''}`} role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={onChange} />
+}
+
+/** A sheet title with Cancel on the left. */
+export function SheetHeader({ title, onClose }: { title: string; onClose: () => void }) {
+  return (
+    <header className="sheet-header">
+      <button type="button" className="link" onClick={onClose}>
+        Cancel
+      </button>
+      <h1>{title}</h1>
+      <span className="sheet-header-spacer" />
+    </header>
+  )
+}
+
 /** A full-height sheet sliding over the current screen. */
 export function Sheet({ children, label, onClose }: { children: ReactNode; label: string; onClose: () => void }) {
   useEffect(() => {

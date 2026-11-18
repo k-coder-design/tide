@@ -1,5 +1,6 @@
 import type { ApiHandlers } from '../shared/api'
 import type { Context } from './domain/context'
+import { BackupService } from './domain/backups'
 import { CheckinService } from './domain/checkins'
 import { EventService } from './domain/events'
 import { JournalService } from './domain/journal'
@@ -13,6 +14,7 @@ export function createHandlers(ctx: Context): ApiHandlers {
   const journal = new JournalService(ctx)
   const partners = new PartnerService(ctx)
   const settings = new SettingsService(ctx)
+  const backups = new BackupService(ctx)
   return {
     'today.summary': (today) => ({ desire: checkins.desire(today), week: journal.week(today) }),
     'checkins.setDesire': (date, desire) => checkins.setDesire(date, desire),
@@ -28,6 +30,9 @@ export function createHandlers(ctx: Context): ApiHandlers {
     'partners.rename': (id, label) => partners.rename(id, label),
     'partners.setArchived': (id, archived) => partners.setArchived(id, archived),
     'settings.get': () => settings.get(),
-    'settings.setTheme': (theme) => settings.setTheme(theme)
+    'settings.setTheme': (theme) => settings.setTheme(theme),
+    'backup.status': () => backups.status(),
+    'backup.markDone': () => backups.markDone(),
+    'backup.setReminder': (on) => backups.setReminder(on)
   }
 }

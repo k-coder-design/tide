@@ -2,7 +2,7 @@ import { useState } from 'react'
 import type { LockStatus } from '../../shared/types'
 import { Icon } from '../components/Icon'
 import { PinPad } from '../components/PinPad'
-import { Sheet } from '../components/controls'
+import { Sheet, SheetHeader, Switch } from '../components/controls'
 import { api } from '../lib/client'
 
 const PIN_LENGTH = 4
@@ -82,22 +82,6 @@ export function PrivacySettings({ status, onStatus }: { status: LockStatus; onSt
         </Sheet>
       )}
     </section>
-  )
-}
-
-function Switch({ label, on, onChange, disabled = false }: { label: string; on: boolean; onChange: () => void; disabled?: boolean }) {
-  return <button type="button" className={`switch ${on ? 'on' : ''}`} role="switch" aria-checked={on} aria-label={label} disabled={disabled} onClick={onChange} />
-}
-
-function SheetHeader({ title, onClose }: { title: string; onClose: () => void }) {
-  return (
-    <header className="sheet-header">
-      <button type="button" className="link" onClick={onClose}>
-        Cancel
-      </button>
-      <h1>{title}</h1>
-      <span className="sheet-header-spacer" />
-    </header>
   )
 }
 

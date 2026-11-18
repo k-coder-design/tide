@@ -83,6 +83,26 @@ export interface Settings {
   theme: Theme
 }
 
+/** Backups as the interface sees them (phase 4, T14, T26). */
+export interface BackupStatus {
+  passwordSet: boolean
+  /** ISO moment of the last backup that was saved or shared; null — never. */
+  lastBackupAt: string | null
+  reminder: boolean
+  /** The weekly reminder is due: on, a week or more since the last backup (or none yet), and the journal has entries. */
+  due: boolean
+}
+
+/** What a backup held, and for a merge what it changed here. */
+export interface MergeResult {
+  entries: number
+  days: number
+  added: number
+  updated: number
+}
+
+export type RestoreMode = 'replace' | 'merge'
+
 /** LOCKED — Tide is locked; WRONG_PIN — the PIN did not match; WAIT — too many wrong PINs, try later. */
 export type ErrorCode = 'VALIDATION' | 'NOT_FOUND' | 'STORAGE' | 'INTERNAL' | 'LOCKED' | 'WRONG_PIN' | 'WAIT' | 'MISSING'
 

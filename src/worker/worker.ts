@@ -1,5 +1,5 @@
 import sqlite3InitModule from '@sqlite.org/sqlite-wasm'
-import { isApiMethod, isLockMethod, WRITE_METHODS, type LockContract, type LockMethod } from '../shared/api'
+import { isApiMethod, isLockMethod, WRITE_METHODS, type LockContract, type LockMethod, type StorageContract, type StorageMethod } from '../shared/api'
 import type { LockStatus, Result } from '../shared/types'
 import { DomainError, toAppError } from '../core/domain/errors'
 import { Session } from '../core/session'
@@ -56,6 +56,18 @@ const LOCK_CALLS: LockCalls = {
   'lock.setAutoLock': (s, minutes) => s.setAutoLock(minutes)
 }
 
+type StorageCalls = {
+  [M in Exclude<StorageMethod, 'storage.startOver' | 'storage.deleteAll'>]: (session: Session, ...args: Parameters<StorageContract[M]>) => ReturnType<StorageContract[M]> | Promise<ReturnType<StorageContract[M]>>
+}
+
+const STORAGE_CALLS: StorageCalls = {
+  'backup.setPassword': (s, password) => s.setBackupPassword(password),
+  'backup.create': (s) => s.createBackup(),
+  'backup.restore': (s, file, password, mode) => s.restoreBackup(file, password, mode)
+}
+
+const isStorageCall = (method: unknown): method is keyof StorageCalls => typeof method === 'string' && Object.hasOwn(STORAGE_CALLS, method)
+
 async function call(method: unknown, args: unknown[]): Promise<unknown> {
   if (method === 'storage.startOver') {
     // Only after the saves disappeared (T24); the vault refuses while any save is present.
@@ -64,6 +76,13 @@ async function call(method: unknown, args: unknown[]): Promise<unknown> {
     return (await ready).status()
   }
   const session = await ready
+  if (method === 'storage.deleteAll') {
+    await session.deleteAll()
+    ready = start()
+    ready.catch(() => undefined)
+    return (await ready).status()
+  }
+  if (isStorageCall(method)) return (STORAGE_CALLS[method] as (s: Session, ...a: unknown[]) => unknown)(session, ...args)
   if (isLockMethod(method)) return (LOCK_CALLS[method] as (s: Session, ...a: unknown[]) => unknown)(session, ...args)
   if (!isApiMethod(method)) throw new DomainError('NOT_FOUND', 'Unknown method')
   const data = (session.handlers()[method] as (...params: unknown[]) => unknown)(...args)

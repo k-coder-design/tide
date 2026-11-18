@@ -27,8 +27,8 @@ export function MissingJournal({ message, onStarted }: { message: string; onStar
       <h1>Your journal is missing</h1>
       <p>{message}</p>
       <p>
-        If you have just reinstalled Tide or cleared Safari's website data, the old entries cannot come back. Otherwise, close Tide fully and
-        open it again before starting over.
+        First close Tide fully and open it again. If the journal is still missing, start a new one and then bring your entries back from your
+        latest backup: Settings → Restore from backup.
       </p>
       {error && <p className="error-text">{error}</p>}
       <div className="push-bottom fatal-actions">

@@ -1,5 +1,8 @@
 import type {
+  BackupStatus,
   EventInput,
+  MergeResult,
+  RestoreMode,
   LockStatus,
   JournalDay,
   JournalFilter,
@@ -32,6 +35,10 @@ export interface ApiContract {
   'partners.setArchived'(id: string, archived: boolean): Partner
   'settings.get'(): Settings
   'settings.setTheme'(theme: Theme): Settings
+  'backup.status'(): BackupStatus
+  /** After the backup file was saved or shared. */
+  'backup.markDone'(): BackupStatus
+  'backup.setReminder'(on: boolean): BackupStatus
 }
 
 export type ApiMethod = keyof ApiContract
@@ -45,7 +52,9 @@ export const WRITE_METHODS: ReadonlySet<ApiMethod> = new Set<ApiMethod>([
   'partners.create',
   'partners.rename',
   'partners.setArchived',
-  'settings.setTheme'
+  'settings.setTheme',
+  'backup.markDone',
+  'backup.setReminder'
 ])
 
 export type ApiHandlers = { [M in ApiMethod]: (...args: Parameters<ApiContract[M]>) => ReturnType<ApiContract[M]> }
@@ -65,7 +74,10 @@ const METHODS: ReadonlySet<string> = new Set<ApiMethod>([
   'partners.rename',
   'partners.setArchived',
   'settings.get',
-  'settings.setTheme'
+  'settings.setTheme',
+  'backup.status',
+  'backup.markDone',
+  'backup.setReminder'
 ])
 
 export const isApiMethod = (value: unknown): value is ApiMethod => typeof value === 'string' && METHODS.has(value)
@@ -83,11 +95,19 @@ export interface LockContract {
 
 export type LockMethod = keyof LockContract
 
-/** Storage recovery (T24): answered even when the journal could not be opened. */
+/** Storage as a whole — handled by the session in the Worker, which holds the keys and the encrypted saves. */
 export interface StorageContract {
-  /** After the saves disappeared: forget the orphaned key and open a new, empty journal. */
+  /** After the saves disappeared (T24): forget the orphaned key and open a new, empty journal. Works even when the journal could not open. */
   'storage.startOver'(): LockStatus
+  /** Phase 4: erase the journal, its saves and keys; Tide starts again as on first launch. */
+  'storage.deleteAll'(): LockStatus
+  'backup.setPassword'(password: string): BackupStatus
+  /** The encrypted backup file, ready to save or share. */
+  'backup.create'(): Uint8Array
+  'backup.restore'(file: Uint8Array, password: string, mode: RestoreMode): MergeResult
 }
+
+export type StorageMethod = keyof StorageContract
 
 /** Everything the client can call. */
 export type ClientContract = ApiContract & LockContract & StorageContract

@@ -1354,3 +1354,47 @@ html.covered body::after {
   text-align: left;
   color: inherit;
 }
+
+/* ---------- Backups (phase 4) ---------- */
+.file-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  text-align: left;
+  width: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.file-card .row-title {
+  overflow-wrap: anywhere;
+}
+
+.reminder-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px 12px 16px;
+  background: var(--teal-tint);
+  border-color: transparent;
+}
+
+.reminder-card .row-sub {
+  color: var(--teal-ink);
+}
+
+.button.small-button {
+  flex: none;
+  height: 38px;
+  padding: 0 16px;
+  background: var(--teal);
+  color: var(--on-accent);
+  font-size: 15px;
+}
+
+.row-title.strong {
+  font-weight: 800;
+}

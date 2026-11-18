@@ -3,6 +3,7 @@ import type { EventKind } from '../../shared/types'
 import { Icon } from '../components/Icon'
 import { useState } from 'react'
 import { KindBadge, RatingRow, useLoad } from '../components/controls'
+import { BackupSheet, lastBackupText } from './BackupSettings'
 import { api } from '../lib/client'
 import { addDays, dayMonth, longDate, today as todayKey, weekdayLetter, weekdayName } from '../lib/dates'
 import { KINDS } from '../lib/entries'
@@ -30,6 +31,8 @@ export function TodayScreen({
   const day = picked > today ? today : picked
   const { data, error } = useLoad(() => api('today.summary', today), [today, version])
   const { data: shown } = useLoad(() => api('journal.day', day), [day, version])
+  const [backingUp, setBackingUp] = useState(false)
+  const { data: backup } = useLoad(() => api('backup.status'), [version, backingUp])
 
   const setDesire = async (desire: number | null) => {
     await api('checkins.setDesire', day, desire)
@@ -85,6 +88,18 @@ export function TodayScreen({
         ))}
       </section>
 
+      {backup?.due && (
+        <section className="card reminder-card">
+          <span className="row-text">
+            <span className="row-title">Time for a backup</span>
+            <span className="row-sub">{lastBackupText(backup)}</span>
+          </span>
+          <button type="button" className="button small-button" onClick={() => setBackingUp(true)}>
+            Back up
+          </button>
+        </section>
+      )}
+
       <section className="card">
         <div className="card-head">
           <h2>This week</h2>
@@ -119,6 +134,7 @@ export function TodayScreen({
           ))}
         </div>
       </section>
+      {backingUp && <BackupSheet onClose={() => setBackingUp(false)} />}
     </div>
   )
 }

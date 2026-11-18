@@ -1,7 +1,9 @@
 import type { Sqlite3Static } from '@sqlite.org/sqlite-wasm'
 import type { ApiHandlers } from '../shared/api'
-import type { LockStatus } from '../shared/types'
+import type { BackupStatus, LockStatus, MergeResult, RestoreMode } from '../shared/types'
+import { SCHEMA_VERSION } from './db/migrations'
 import { openMemoryDatabase, type MemoryDatabase } from './db/wasm'
+import { BackupService } from './domain/backups'
 import { createContext } from './domain/context'
 import { DomainError } from './domain/errors'
 import { createHandlers } from './services'
@@ -19,6 +21,7 @@ import {
   type Bytes,
   type LockRecord
 } from './storage/lock'
+import { checkBackupPassword, deriveBackupKey, openBackup, sealBackup } from './storage/backup'
 import { StorageError, Vault, type KeyStore, type Opened, type SlotStore } from './storage/vault'
 
 interface OpenJournal {
@@ -42,16 +45,17 @@ export class Session {
     private readonly slots: SlotStore,
     private readonly keys: KeyStore,
     private readonly clock: () => number,
-    private readonly pinIterations?: number
+    private readonly pinIterations?: number,
+    private readonly backupIterations?: number
   ) {}
 
   static async start(
     sqlite3: Sqlite3Static,
     slots: SlotStore,
     keys: KeyStore,
-    options: { clock?: () => number; pinIterations?: number } = {}
+    options: SessionOptions = {}
   ): Promise<Session> {
-    const session = new Session(sqlite3, slots, keys, options.clock ?? Date.now, options.pinIterations)
+    const session = new Session(sqlite3, slots, keys, options.clock ?? Date.now, options.pinIterations, options.backupIterations)
     const opened = await Vault.open(slots, keys)
     if ('locked' in opened) session.record = await session.withoutFaceId(opened.locked)
     else await session.load(opened, null)
@@ -66,7 +70,7 @@ export class Session {
     sqlite3: Sqlite3Static,
     slots: SlotStore,
     keys: KeyStore,
-    options: { clock?: () => number; pinIterations?: number } = {}
+    options: SessionOptions = {}
   ): Promise<Session> {
     await Vault.startOver(slots, keys)
     return Session.start(sqlite3, slots, keys, options)
@@ -162,6 +166,96 @@ export class Session {
     return this.status()
   }
 
+  /** Sets or changes the backup password; its key is kept inside the encrypted journal (T26). */
+  async setBackupPassword(password: string): Promise<BackupStatus> {
+    const journal = this.openJournal()
+    const key = await deriveBackupKey(checkBackupPassword(password), undefined, this.backupIterations)
+    const backups = new BackupService(createContext(journal.memory.db))
+    backups.setKey(key)
+    await this.persist()
+    return backups.status()
+  }
+
+  /** The whole journal as an encrypted backup file. */
+  async createBackup(): Promise<Uint8Array> {
+    const journal = this.openJournal()
+    const key = new BackupService(createContext(journal.memory.db)).key()
+    if (!key) throw new DomainError('VALIDATION', 'Set a backup password first')
+    return sealBackup(key, journal.memory.serialize())
+  }
+
+  /**
+   * Restores a backup: "replace" makes it the whole journal, "merge" adds what is missing here and takes newer copies.
+   * The app lock and its PIN stay as they are on this phone. Nothing changes unless the file opens and is a Tide journal.
+   */
+  async restoreBackup(file: Uint8Array, password: string, mode: RestoreMode): Promise<MergeResult> {
+    const journal = this.openJournal()
+    if (mode !== 'replace' && mode !== 'merge') throw new DomainError('VALIDATION', 'Choose Replace or Merge')
+    if (!(file instanceof Uint8Array)) throw new DomainError('VALIDATION', 'Choose a backup file')
+    const { image } = await openBackup(file, typeof password === 'string' ? password : '')
+    const backup = this.openBackupImage(image)
+    const local = new BackupService(createContext(journal.memory.db)).status()
+    if (mode === 'merge') {
+      try {
+        const here = new BackupService(createContext(journal.memory.db))
+        const result = here.merge(backup.db)
+        here.adoptLocalState(local)
+        await this.persist()
+        return result
+      } finally {
+        backup.close()
+      }
+    }
+    const contents = BackupService.contents(backup.db)
+    new BackupService(createContext(backup.db)).adoptLocalState(local)
+    const previous = journal.memory
+    journal.memory = backup
+    journal.handlers = createHandlers(createContext(backup.db))
+    try {
+      await this.persist()
+    } catch (error) {
+      backup.close()
+      journal.memory = previous
+      journal.handlers = createHandlers(createContext(previous.db))
+      throw error
+    }
+    previous.close()
+    return { ...contents, added: 0, updated: 0 }
+  }
+
+  /**
+   * Delete all data (phase 4): the journal leaves memory, both save files are emptied, then the keys and the PIN
+   * are forgotten. The Worker then starts a new session, as on first launch. Saves go first: cut off after them,
+   * the T24 screen offers a fresh start; never a readable journal without its owner's intent.
+   */
+  async deleteAll(): Promise<void> {
+    const journal = this.openJournal()
+    journal.memory.close()
+    journal.raw?.fill(0)
+    this.journal = null
+    await this.slots.write(0, new Uint8Array(0))
+    await this.slots.write(1, new Uint8Array(0))
+    await this.keys.clear()
+    this.record = null
+  }
+
+  /** A decrypted backup as a database, migrated to this version; refused if it is not a Tide journal or is newer. */
+  private openBackupImage(image: Uint8Array): MemoryDatabase {
+    let memory: MemoryDatabase
+    try {
+      memory = openMemoryDatabase(this.sqlite3, image)
+    } catch {
+      throw new DomainError('VALIDATION', 'The backup could not be read')
+    }
+    const version = memory.db.pragma('user_version', { simple: true }) as number
+    const tables = memory.db.prepare("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('events', 'partners', 'daily_checkins', 'sex_details', 'settings')").pluck().get()
+    if (version > SCHEMA_VERSION || tables !== 5) {
+      memory.close()
+      throw new DomainError('VALIDATION', version > SCHEMA_VERSION ? 'This backup was made by a newer Tide. Update Tide, then try again.' : 'The backup could not be read')
+    }
+    return memory
+  }
+
   private async load({ vault, image }: Opened, raw: Bytes | null): Promise<void> {
     const memory = openMemoryDatabase(this.sqlite3, image ?? undefined)
     this.journal = { memory, vault, raw, handlers: createHandlers(createContext(memory.db)) }
@@ -212,6 +306,13 @@ export class Session {
     if (record.failed > 0) await this.store({ ...record, failed: 0, retryAt: 0 })
     return raw
   }
+}
+
+export interface SessionOptions {
+  clock?: () => number
+  /** Fewer PBKDF2 rounds — tests only. */
+  pinIterations?: number
+  backupIterations?: number
 }
 
 function waitText(ms: number): string {

@@ -3,6 +3,7 @@ import type { LockStatus, Partner, Settings, Theme } from '../../shared/types'
 import { Icon } from '../components/Icon'
 import { Segmented, Sheet, useLoad } from '../components/controls'
 import { api } from '../lib/client'
+import { BackupSettings, DeleteAllRow } from './BackupSettings'
 import { PrivacySettings } from './PrivacySettings'
 
 const THEMES: ReadonlyArray<{ value: Theme; label: string }> = [
@@ -16,12 +17,18 @@ export function SettingsScreen({
   settings,
   onSettings,
   lock,
-  onLockStatus
+  onLockStatus,
+  onRestored,
+  onDeleted
 }: {
   settings: Settings
   onSettings: (settings: Settings) => void
   lock: LockStatus
   onLockStatus: (status: LockStatus) => void
+  /** After a restore: the journal changed under every screen, settings included. */
+  onRestored: () => void
+  /** After Delete all data: Tide starts again as on first launch. */
+  onDeleted: (status: LockStatus) => void
 }) {
   const [version, setVersion] = useState(0)
   const { data: partners } = useLoad(() => api('partners.list', true), [version])
@@ -34,6 +41,13 @@ export function SettingsScreen({
       </header>
 
       <PrivacySettings status={lock} onStatus={onLockStatus} />
+
+      <BackupSettings
+        onRestored={() => {
+          setVersion((v) => v + 1)
+          onRestored()
+        }}
+      />
 
       <section className="group">
         <h2 className="label">Partner labels</h2>
@@ -63,11 +77,14 @@ export function SettingsScreen({
           value={settings.theme}
           onChange={(theme) => theme && void api('settings.setTheme', theme).then(onSettings)}
         />
+        <div className="card list-card">
+          <DeleteAllRow onDeleted={onDeleted} />
+        </div>
       </section>
 
       <p className="footnote">
         Your journal stays on this iPhone and is stored encrypted. Nothing is sent anywhere. With App lock on, it opens only with your PIN. Deleting Tide from the Home Screen deletes the
-        journal — backups arrive in a coming update.
+        journal — keep a backup, and now and then a copy on your Mac or in iCloud Drive.
       </p>
 
       {editing && (
