@@ -26,6 +26,8 @@ export interface EventInput {
 export interface TideEvent extends EventInput {
   id: string
   partnerLabel: string | null
+  /** Sex only: contraceptive courses covering the date (T6) — computed from medications, never stored per event. */
+  contraception: string[]
   createdAt: string
   updatedAt: string
 }
@@ -161,6 +163,136 @@ export interface HealthImportResult {
   keptDays: number
   courses: number
   keptCourses: number
+}
+
+/** Daily flow (T13, T18): `unspecified` comes only from the Health import; NULL — not recorded, unlike `none`. */
+export type Flow = 'none' | 'spotting' | 'light' | 'medium' | 'heavy' | 'unspecified'
+/** What the check-in offers. */
+export type LoggedFlow = Exclude<Flow, 'unspecified'>
+export type SymptomTag = 'cramps' | 'headache' | 'bloating' | 'breast_tenderness' | 'acne' | 'low_mood' | 'irritability' | 'fatigue'
+
+/** The cycle part of a day's check-in. */
+export interface CycleDay {
+  date: string
+  flow: Flow | null
+  flowSource: 'tide' | 'health' | null
+  symptoms: SymptomTag[]
+  /** 1 on the first bleeding day of the latest episode on or before this date; null — no episode yet. */
+  cycleDay: number | null
+  /** This day is the first bleeding day of an episode. */
+  startsCycle: boolean
+}
+
+/** Consecutive bleeding days; gaps of up to 2 days do not break it, spotting never starts one (T18). */
+export interface BleedingEpisode {
+  start: string
+  /** Last bleeding day, also while ongoing. */
+  last: string
+  /** The last bleeding day was within 2 days of today, so the episode may go on. */
+  ongoing: boolean
+  /** From the first to the last bleeding day, inclusive. */
+  days: number
+  strongest: Flow
+  /** Spotting within 2 days before, inside, or within 2 days after. */
+  spottingDays: number
+  /** Days from this start to the next episode's start; null for the latest. */
+  cycle: number | null
+  /** Any of its days came from the Health import. */
+  fromHealth: boolean
+}
+
+export type Regimen = 'continuous' | '21/7' | '24/4' | 'other'
+
+/** A medication course (phase 6). With `intervalHours` it gets a pill card on Today and a dose log. */
+export interface MedicationInput {
+  name: string
+  isContraceptive: boolean
+  regimen: Regimen | null
+  startedOn: string
+  endedOn: string | null
+  intervalHours: number | null
+  /** Allowed delay from the leaflet, set by the user; Tide gives no medical advice. */
+  delayWindowHours: number | null
+  /** Approximate usual local time for days without a dose log (imported history); both null — time unknown. */
+  usualTimeFrom: string | null
+  usualTimeTo: string | null
+  note: string | null
+}
+
+export interface Medication extends MedicationInput {
+  id: string
+  source: 'tide' | 'health'
+  /** The course covers today. */
+  active: boolean
+  /** Has an interval, so doses are logged. */
+  tracked: boolean
+}
+
+/** One logged dose (T15): an absolute moment plus the phone's zone at the time. */
+export interface PillDose {
+  id: string
+  medicationId: string
+  status: 'taken' | 'missed'
+  takenAt: string | null
+  timeZone: string
+  localDate: string
+  /** HH:MM in the zone it was taken in; null for a missed dose. */
+  localTime: string | null
+  /** Real time since the previous taken dose; null for the first one and for missed doses. */
+  intervalMinutes: number | null
+  /** Minutes past interval + allowed delay; null — on time. */
+  lateMinutes: number | null
+  /** The previous dose was taken in another zone: its local time there. */
+  previousElsewhere: { localTime: string; timeZone: string } | null
+}
+
+/** A tracked medication right now, for the pill card on Today and the top of the pill log. */
+export interface PillStatus {
+  medication: Medication
+  last: PillDose | null
+  /** The last taken dose falls on today's date in the phone's current zone. */
+  takenToday: boolean
+  /** The next dose: due = last + interval, latest = due + allowed delay, in the phone's current zone. */
+  next: { due: string; latest: string; dueLocal: string; latestLocal: string; dueDate: string; latestDate: string } | null
+  minutesSinceLast: number | null
+  /** Past the latest time. */
+  overdue: boolean
+  zone: string
+}
+
+export interface PillLog {
+  status: PillStatus
+  doses: PillDose[]
+  /** Local date of the first dose logged in Tide; days of the course before it have no dose log. */
+  firstLoggedOn: string | null
+}
+
+export interface PillSummary {
+  medicationId: string
+  name: string
+  onTime: number
+  late: number
+  missed: number
+}
+
+/** Insights — cycle (phase 6, T13). Numbers only: no predictions, no advice. */
+export interface CycleInsights {
+  /** Newest first. */
+  episodes: BleedingEpisode[]
+  averageEpisode: number | null
+  averageCycle: number | null
+  cycleRange: { min: number; max: number } | null
+  /** The last 6 calendar months, the current one up to today. */
+  months: Array<{ month: string; bleedingDays: number; spottingDays: number }>
+  /** Monday 11 weeks back up to today. */
+  days: Array<{ date: string; flow: Flow | null }>
+  /** Average desire on bleeding days, spotting days and other rated days. */
+  desireByFlow: { bleeding: number | null; spotting: number | null; other: number | null }
+  /** Pills over the last 30 days, per tracked medication. */
+  pills: PillSummary[]
+  /** Earliest recorded flow; null — none. */
+  historyFrom: string | null
+  hasFlow: boolean
 }
 
 /** LOCKED — Tide is locked; WRONG_PIN — the PIN did not match; WAIT — too many wrong PINs, try later. */

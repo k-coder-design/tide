@@ -1,6 +1,6 @@
 # Tide — data model (draft for review)
 
-Status: **approved, phase 0** (17.11.2026); cycle section added the same day (T11–T13). App lock implemented in phase 3 (T21). Implemented in phase 2: `events`, `sex_details`, `partners`, `daily_checkins` (desire; the flow columns exist but stay empty until phases 4 and 6), `settings`, and the encrypted storage (lock off). Still to come: the flow import in phase 4; `medications`, `pill_log` and `day_symptoms` in phase 6. The cycle parts are removed if the Health import fails (T11).
+Status: **approved, phase 0** (17.11.2026); cycle section added the same day (T11–T13). App lock implemented in phase 3 (T21). Implemented in phase 2: `events`, `sex_details`, `partners`, `daily_checkins` (desire; the flow columns exist but stay empty until phases 4 and 6), `settings`, and the encrypted storage (lock off). The Health import filled flow and `medications` in phase 4 (T27); `pill_log` and `day_symptoms` arrived with the cycle section in phase 6 (T32), which also writes flow from the daily check-in.
 
 ## What the app measures
 
@@ -87,6 +87,8 @@ When a day has several records the stronger flow wins. A day already recorded in
 
 ### `day_symptoms` — symptom tags by day (phase 6)
 
+As built (T32): code `src/core/domain/cycle.ts`, which also computes the bleeding episodes and the cycle insights.
+
 | Column | Type | Notes |
 | --- | --- | --- |
 | `date` | TEXT NOT NULL | local date |
@@ -108,7 +110,7 @@ Built for changing time zones (T15): what matters is the **real time between dos
 | `note` | TEXT NULL | |
 | `updated_at` | TEXT NOT NULL | |
 
-Computed, not stored (Tide only shows numbers and flags, gives no medical advice):
+Computed, not stored (Tide only shows numbers and flags, gives no medical advice; as built in `src/core/domain/pills.ts`, T32):
 
 - **Interval** — time since the previous `taken` dose of the same medication, in hours and minutes ("25 h 10 min").
 - **Late** — interval longer than `medications.interval_hours` + `medications.delay_window_hours`.
@@ -134,7 +136,7 @@ Computed, not stored (Tide only shows numbers and flags, gives no medical advice
 
 ### `settings` — key/value
 
-Reminder time, theme, lock timeout and similar. Schema version lives in `PRAGMA user_version` (migrations as in Recallo). Migration 1 creates the phase 2 tables; migration 2 rebuilds `daily_checkins` for the 1–5 desire scale (T19); migration 3 creates `medications` (phase 4, for the Health import, T27).
+Reminder time, theme, lock timeout and similar. Schema version lives in `PRAGMA user_version` (migrations as in Recallo). Migration 1 creates the phase 2 tables; migration 2 rebuilds `daily_checkins` for the 1–5 desire scale (T19); migration 3 creates `medications` (phase 4, for the Health import, T27); migration 4 creates `pill_log` and `day_symptoms` (phase 6, T32).
 
 ## Storage and encryption (proposal)
 
@@ -155,4 +157,4 @@ Same stack as Recallo: Mobile — SQLite WebAssembly in a Web Worker, the core r
 ## Merging backups (phase 4)
 
 - *Replace* — the backup becomes the whole database.
-- *Merge* — rows are matched by `id` (`date` for `daily_checkins`, (`date`, `tag`) for `day_symptoms`); a missing row is added, an existing one is replaced only if the backup's `updated_at` is newer. Deletions are not carried over by a merge (a deleted event may come back from an older backup) — acceptable for moving to a new phone, where *Replace* is the usual choice. As built (T26): partners, events (with their `sex_details`) and `daily_checkins` are merged; `settings` (theme, backup password, reminder) stay as they are on the phone.
+- *Merge* — rows are matched by `id` (`date` for `daily_checkins`, (`date`, `tag`) for `day_symptoms`); a missing row is added, an existing one is replaced only if the backup's `updated_at` is newer. Deletions are not carried over by a merge (a deleted event may come back from an older backup) — acceptable for moving to a new phone, where *Replace* is the usual choice. As built (T26, T27, T32): partners, events (with their `sex_details`), `daily_checkins`, `medications` and `pill_log` are merged by `updated_at`; `day_symptoms` has no change time, so a tag missing on the phone is added and none is removed; `settings` (theme, backup password, reminder) stay as they are on the phone.

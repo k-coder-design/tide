@@ -25,12 +25,17 @@ export interface EventRow {
   partner_label: string | null
   initiator: Initiator | null
   protection: Protection | null
+  contraception: string | null
 }
 
 /** Events with their partnered details; a WHERE clause and ORDER BY are appended by callers. */
 export const EVENT_SELECT = `
   SELECT e.id, e.kind, e.occurred_on, e.occurred_time, e.satisfaction, e.orgasm, e.note, e.created_at, e.updated_at,
-         d.partner_id, p.label AS partner_label, d.initiator, d.protection
+         d.partner_id, p.label AS partner_label, d.initiator, d.protection,
+         CASE WHEN e.kind = 'sex' THEN (
+           SELECT group_concat(m.name, '\n') FROM medications m
+           WHERE m.is_contraceptive = 1 AND m.started_on <= e.occurred_on AND (m.ended_on IS NULL OR m.ended_on >= e.occurred_on)
+         ) END AS contraception
   FROM events e
   LEFT JOIN sex_details d ON d.event_id = e.id
   LEFT JOIN partners p ON p.id = d.partner_id`
@@ -51,6 +56,8 @@ export function toEvent(row: EventRow): TideEvent {
     partnerLabel: row.partner_label,
     initiator: row.initiator,
     protection: row.protection,
+    // Computed from the courses at read time (T6): correcting a course's dates updates past entries too.
+    contraception: row.contraception ? [...new Set(row.contraception.split('\n'))] : [],
     createdAt: row.created_at,
     updatedAt: row.updated_at
   }

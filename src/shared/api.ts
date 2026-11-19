@@ -1,5 +1,13 @@
 import type {
   BackupStatus,
+  CycleDay,
+  CycleInsights,
+  LoggedFlow,
+  Medication,
+  MedicationInput,
+  PillLog,
+  PillStatus,
+  SymptomTag,
   EventInput,
   HealthImportResult,
   InsightsPeriod,
@@ -45,6 +53,22 @@ export interface ApiContract {
   'backup.setReminder'(on: boolean): BackupStatus
   /** Backups without a password (T28). */
   'backup.setPlain'(on: boolean): BackupStatus
+  /** Phase 6 — the cycle (T13, T18); a null flow — not recorded. */
+  'cycle.day'(date: string): CycleDay
+  'cycle.setFlow'(date: string, flow: LoggedFlow | null): CycleDay
+  'cycle.setSymptoms'(date: string, tags: SymptomTag[]): CycleDay
+  'insights.cycle'(today: string): CycleInsights
+  /** Medication courses (T6). */
+  'medications.list'(today: string): Medication[]
+  'medications.create'(input: MedicationInput, today: string): Medication
+  'medications.update'(id: string, input: MedicationInput, today: string): Medication
+  'medications.delete'(id: string): void
+  /** The pill log (T15): `zone` is the phone's current IANA zone. */
+  'pills.today'(zone: string): PillStatus[]
+  'pills.log'(medicationId: string, zone: string): PillLog
+  'pills.take'(input: { medicationId: string; takenAt: string | null; timeZone: string }): PillStatus
+  'pills.miss'(input: { medicationId: string; localDate: string; timeZone: string }): PillStatus
+  'pills.delete'(id: string): void
 }
 
 export type ApiMethod = keyof ApiContract
@@ -61,7 +85,15 @@ export const WRITE_METHODS: ReadonlySet<ApiMethod> = new Set<ApiMethod>([
   'settings.setTheme',
   'backup.markDone',
   'backup.setReminder',
-  'backup.setPlain'
+  'backup.setPlain',
+  'cycle.setFlow',
+  'cycle.setSymptoms',
+  'medications.create',
+  'medications.update',
+  'medications.delete',
+  'pills.take',
+  'pills.miss',
+  'pills.delete'
 ])
 
 export type ApiHandlers = { [M in ApiMethod]: (...args: Parameters<ApiContract[M]>) => ReturnType<ApiContract[M]> }
@@ -86,7 +118,20 @@ const METHODS: ReadonlySet<string> = new Set<ApiMethod>([
   'backup.status',
   'backup.markDone',
   'backup.setReminder',
-  'backup.setPlain'
+  'backup.setPlain',
+  'cycle.day',
+  'cycle.setFlow',
+  'cycle.setSymptoms',
+  'insights.cycle',
+  'medications.list',
+  'medications.create',
+  'medications.update',
+  'medications.delete',
+  'pills.today',
+  'pills.log',
+  'pills.take',
+  'pills.miss',
+  'pills.delete'
 ])
 
 export const isApiMethod = (value: unknown): value is ApiMethod => typeof value === 'string' && METHODS.has(value)

@@ -38,6 +38,7 @@ export function EntryDetail({ id, version, onBack, onEdit, onDeleted }: { id: st
   if (event.kind === 'sex') {
     fields.push(['Initiated by', labelOf(INITIATORS, event.initiator) ?? '—'])
     fields.push(['Protection', labelOf(PROTECTIONS, event.protection) ?? '—'])
+    if (event.contraception.length > 0) fields.push(['Contraception', event.contraception.join(', '), 'teal-text'])
   }
 
   return (
@@ -64,6 +65,11 @@ export function EntryDetail({ id, version, onBack, onEdit, onDeleted }: { id: st
             </div>
           ))}
         </div>
+      )}
+      {event.contraception.length > 0 && (
+        <p className="muted small with-icon">
+          <Icon name="pill" size={16} /> Contraception comes from Medications and updates if a course changes.
+        </p>
       )}
       <div className="card">
         <p className="muted small">Note</p>

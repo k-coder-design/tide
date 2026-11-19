@@ -86,6 +86,27 @@ const MIGRATIONS: string[] = [
     note TEXT,
     updated_at TEXT NOT NULL
   );
+  `,
+  // Phase 6 (T32): the pill log — one row per dose, an absolute moment plus the phone's zone (T15) — and symptom tags by day.
+  `
+  CREATE TABLE pill_log (
+    id TEXT PRIMARY KEY,
+    medication_id TEXT NOT NULL REFERENCES medications(id) ON DELETE CASCADE,
+    status TEXT NOT NULL CHECK (status IN ('taken', 'missed')),
+    taken_at TEXT,
+    time_zone TEXT NOT NULL,
+    local_date TEXT NOT NULL,
+    note TEXT,
+    updated_at TEXT NOT NULL,
+    CHECK ((status = 'taken') = (taken_at IS NOT NULL))
+  );
+  CREATE INDEX pill_log_medication ON pill_log(medication_id, local_date);
+
+  CREATE TABLE day_symptoms (
+    date TEXT NOT NULL,
+    tag TEXT NOT NULL CHECK (tag IN ('cramps', 'headache', 'bloating', 'breast_tenderness', 'acne', 'low_mood', 'irritability', 'fatigue')),
+    PRIMARY KEY (date, tag)
+  );
   `
 ]
 

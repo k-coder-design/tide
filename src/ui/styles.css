@@ -19,6 +19,9 @@
   --berry: #933a57;
   --berry-tint: #ead5dc;
   --danger: #a3302a;
+  --warn: #85560a;
+  --warn-tint: #ecdcc0;
+  --spotting: #e2c7cf;
   --on-accent: #ffffff;
   --shadow: 0 1px 2px #16242b26;
   --backdrop: #16242b66;
@@ -45,6 +48,9 @@
     --berry: #e08aa6;
     --berry-tint: #3a2129;
     --danger: #f08a80;
+    --warn: #e2b766;
+    --warn-tint: #3a2f1a;
+    --spotting: #66394a;
     --on-accent: #0e1719;
     --shadow: none;
     --backdrop: #000000a0;
@@ -70,6 +76,9 @@
   --berry: #e08aa6;
   --berry-tint: #3a2129;
   --danger: #f08a80;
+  --warn: #e2b766;
+  --warn-tint: #3a2f1a;
+  --spotting: #66394a;
   --on-accent: #0e1719;
   --shadow: none;
   --backdrop: #000000a0;
@@ -1648,4 +1657,408 @@ button.heat:focus-visible {
   text-align: right;
   font-size: 13px;
   font-weight: 700;
+}
+
+/* Phase 6 — the cycle (T32): pill card, bleeding on Today, pill log, medications, cycle insights. */
+.strong {
+  font-weight: 700;
+}
+
+.tiny {
+  font-size: 11px;
+  margin: 0;
+}
+
+.warn-text {
+  color: var(--warn);
+}
+
+.berry-text {
+  color: var(--berry);
+}
+
+.badge.warn {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+
+.with-icon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+}
+
+.icon-button.bordered {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  flex: none;
+}
+
+.card.pill-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 10px 12px;
+}
+
+.pill-open {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  color: inherit;
+}
+
+.pill-card .small-button {
+  flex: none;
+  height: 40px;
+}
+
+.flow-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.flow-option {
+  height: 48px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0;
+}
+
+.flow-option.on {
+  border-color: var(--berry);
+}
+
+.flow-swatch {
+  width: 20px;
+  height: 12px;
+  border-radius: 4px;
+  display: block;
+  flex: none;
+  background: var(--surface);
+  border: 1px solid var(--faint);
+}
+
+.flow-swatch.spotting,
+.flow-day.spotting,
+.spotting-bg {
+  background: var(--spotting);
+  border-color: transparent;
+}
+
+.flow-swatch.light,
+.flow-day.light {
+  background: color-mix(in srgb, var(--berry) 40%, var(--surface));
+  border-color: transparent;
+}
+
+.flow-swatch.unspecified,
+.flow-day.unspecified {
+  background: color-mix(in srgb, var(--berry) 55%, var(--surface));
+  border-color: transparent;
+}
+
+.flow-swatch.medium,
+.flow-day.medium {
+  background: color-mix(in srgb, var(--berry) 70%, var(--surface));
+  border-color: transparent;
+}
+
+.flow-swatch.heavy,
+.flow-day.heavy {
+  background: var(--berry);
+  border-color: transparent;
+}
+
+.chips.symptoms {
+  gap: 6px;
+}
+
+.chip.small-chip {
+  height: 30px;
+  padding: 0 11px;
+  font-weight: 600;
+}
+
+.chip.on.berry {
+  background: var(--berry-tint);
+  border-color: color-mix(in srgb, var(--berry) 35%, var(--berry-tint));
+  color: var(--berry);
+}
+
+.pill-log h1 {
+  margin: 0;
+}
+
+.course-card .card-head h2 {
+  margin: 0;
+}
+
+.course-card p {
+  margin: 0;
+}
+
+.next-pill {
+  background: var(--teal-tint);
+  color: var(--teal-ink);
+  border-radius: 18px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.next-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.next-time {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.next-time small {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.dose-list {
+  max-height: 330px;
+  overflow-y: auto;
+}
+
+.history-note {
+  border: 1px dashed var(--line);
+  border-radius: 18px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.unit-input {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.unit-input input {
+  width: 64px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 700;
+  text-align: center;
+}
+
+.unit-input input[type='time'] {
+  width: 92px;
+}
+
+.episode-head,
+.episode-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) 44px 52px;
+  gap: 8px;
+  align-items: center;
+}
+
+.episode-head {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.episode-head span:first-child {
+  grid-column: 2;
+}
+
+.episode-head span:not(:first-child),
+.episode-row .num {
+  text-align: right;
+}
+
+.episode-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.episode-list.scroll {
+  max-height: 264px;
+  overflow-y: auto;
+}
+
+.episode-row {
+  min-height: 44px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.episode-row .flow-swatch {
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+}
+
+.episode-dates {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.episode-dates b {
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.episode-dates .muted {
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.episode-row .num {
+  font-size: 15px;
+}
+
+.episode-foot {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.episode-foot b {
+  color: var(--ink);
+}
+
+.mini-switch .segmented button {
+  white-space: nowrap;
+  height: 28px;
+  font-size: 12px;
+  padding: 0 10px;
+}
+
+.flow-months {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  height: 120px;
+}
+
+.flow-month {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.flow-stack {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.flow-stack .bar-part {
+  display: block;
+  border-radius: 4px;
+}
+
+.berry-soft {
+  color: color-mix(in srgb, var(--berry) 70%, var(--surface));
+}
+
+.flow-days {
+  display: grid;
+  grid-template-rows: repeat(7, 13px);
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 3px 4px;
+}
+
+.flow-day {
+  display: block;
+  border-radius: 3px;
+  box-sizing: border-box;
+  border: 1px solid transparent;
+}
+
+.flow-day.none {
+  background: var(--segment);
+}
+
+.flow-day.unrecorded {
+  background: transparent;
+  border: 1px dashed var(--faint);
+}
+
+.legend.wrap {
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend .swatch.flow-day {
+  width: 11px;
+  height: 11px;
+}
+
+.cycle-note {
+  background: var(--berry-tint);
+  color: var(--ink);
+  border-radius: 18px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.med-rows .seg-label {
+  width: 112px;
+}
+
+.med-rows .switch,
+.med-rows .unit-input {
+  margin-left: auto;
+}
+
+.field-button {
+  gap: 8px;
 }

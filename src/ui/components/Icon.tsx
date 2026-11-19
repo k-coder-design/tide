@@ -14,7 +14,12 @@ const PATHS = {
   plus: 'M12 5v14M5 12h14',
   close: 'M6 6l12 12M18 6L6 18',
   lock: 'M5 11h14v9H5zM8 11V8a4 4 0 0 1 8 0v3',
-  backspace: 'M21 5H9l-6 7 6 7h12zM17 9l-6 6M11 9l6 6'
+  backspace: 'M21 5H9l-6 7 6 7h12zM17 9l-6 6M11 9l6 6',
+  pill: 'M10.5 20.5l-7-7a4.95 4.95 0 1 1 7-7l7 7a4.95 4.95 0 1 1-7 7zM8.5 8.5l7 7',
+  clock: 'M4 12a8 8 0 1 0 16 0a8 8 0 1 0 -16 0M12 8v4l3 2',
+  check: 'M5 12l5 5L20 7',
+  alert: 'M12 8v5M12 17h.01',
+  drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z'
 } as const
 
 export type IconName = keyof typeof PATHS

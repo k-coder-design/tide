@@ -3,6 +3,14 @@ import type { InsightsBucket, InsightsDay, InsightsPeriod, InsightsSpan, LibidoI
 import { Segmented, useLoad } from '../components/controls'
 import { api } from '../lib/client'
 import { today as todayKey } from '../lib/dates'
+import type { Navigate } from '../navigation'
+import { CycleInsightsView } from './CycleInsights'
+
+export type InsightsView = 'libido' | 'cycle'
+const VIEWS: ReadonlyArray<{ value: InsightsView; label: string }> = [
+  { value: 'libido', label: 'Libido' },
+  { value: 'cycle', label: 'Cycle' }
+]
 
 const PERIODS: ReadonlyArray<{ value: InsightsPeriod; label: string }> = [
   { value: '12w', label: '12 weeks' },
@@ -12,6 +20,38 @@ const PERIODS: ReadonlyArray<{ value: InsightsPeriod; label: string }> = [
 
 /** Insights — libido (screen 6, phase 5): activity, desire, activity by day, the last four weeks against the four before. */
 export function InsightsScreen({
+  version,
+  period,
+  onPeriod,
+  onOpenDay,
+  view,
+  onView,
+  navigate
+}: {
+  version: number
+  period: InsightsPeriod
+  onPeriod: (period: InsightsPeriod) => void
+  onOpenDay: (date: string) => void
+  view: InsightsView
+  onView: (view: InsightsView) => void
+  navigate: Navigate
+}) {
+  return (
+    <div className="screen insights">
+      <header className="screen-header">
+        <h1>Insights</h1>
+        <Segmented label="Insights" size="small" options={VIEWS} value={view} onChange={(v) => v && onView(v)} />
+      </header>
+      {view === 'libido' ? (
+        <LibidoInsightsView version={version} period={period} onPeriod={onPeriod} onOpenDay={onOpenDay} />
+      ) : (
+        <CycleInsightsView version={version} navigate={navigate} />
+      )}
+    </div>
+  )
+}
+
+function LibidoInsightsView({
   version,
   period,
   onPeriod,
@@ -26,10 +66,7 @@ export function InsightsScreen({
   const { data, error } = useLoad(() => api('insights.libido', today, period), [today, period, version])
 
   return (
-    <div className="screen insights">
-      <header className="screen-header">
-        <h1>Insights</h1>
-      </header>
+    <>
       <div className="period-picker">
         <Segmented label="Period" options={PERIODS} value={period} onChange={(p) => p && onPeriod(p)} />
       </div>
@@ -48,7 +85,7 @@ export function InsightsScreen({
           <CompareCard current={data.compare.current} previous={data.compare.previous} hasFlow={data.hasFlow} />
         </>
       )}
-    </div>
+    </>
   )
 }
 

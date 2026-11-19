@@ -121,6 +121,13 @@ export class BackupService {
       for (const row of source.prepare('SELECT * FROM medications').all() as Array<Record<string, unknown> & { id: string; updated_at: string }>) {
         count(this.upsert('medications', 'id', row))
       }
+      for (const row of source.prepare('SELECT * FROM pill_log').all() as Array<Record<string, unknown> & { id: string; updated_at: string }>) {
+        count(this.upsert('pill_log', 'id', row))
+      }
+      // Symptom tags have no change time: a tag missing here is added, none is removed.
+      for (const row of source.prepare('SELECT date, tag FROM day_symptoms').all() as Array<{ date: string; tag: string }>) {
+        if (db.prepare('INSERT OR IGNORE INTO day_symptoms (date, tag) VALUES (?, ?)').run(row.date, row.tag).changes > 0) added++
+      }
     })()
     return { added, updated, ...BackupService.contents(source) }
   }

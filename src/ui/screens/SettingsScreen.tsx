@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import type { LockStatus, Partner, Settings, Theme } from '../../shared/types'
+import type { Navigate } from '../navigation'
 import { Icon } from '../components/Icon'
 import { Segmented, Sheet, useLoad } from '../components/controls'
 import { api } from '../lib/client'
 import { BackupSettings, DeleteAllRow } from './BackupSettings'
+import { MedicationSettings } from './Medications'
 import { PrivacySettings } from './PrivacySettings'
 
 const THEMES: ReadonlyArray<{ value: Theme; label: string }> = [
@@ -12,8 +14,10 @@ const THEMES: ReadonlyArray<{ value: Theme; label: string }> = [
   { value: 'dark', label: 'Dark' }
 ]
 
-/** Settings (screen 9) — the parts that work in this version: privacy, partner labels and appearance. */
+/** Settings (screen 9): privacy, backup and import, medications, partner labels, appearance. */
 export function SettingsScreen({
+  version: journalVersion,
+  navigate,
   settings,
   onSettings,
   lock,
@@ -21,6 +25,8 @@ export function SettingsScreen({
   onRestored,
   onDeleted
 }: {
+  version: number
+  navigate: Navigate
   settings: Settings
   onSettings: (settings: Settings) => void
   lock: LockStatus
@@ -48,6 +54,8 @@ export function SettingsScreen({
           onRestored()
         }}
       />
+
+      <MedicationSettings version={version + journalVersion} onEdit={(id) => navigate({ type: 'medication', id })} />
 
       <section className="group">
         <h2 className="label">Partner labels</h2>

@@ -5,13 +5,16 @@ import { Icon, type IconName } from './components/Icon'
 import { useLoad } from './components/controls'
 import { api, ApiError, onLocked } from './lib/client'
 import type { Overlay, Tab } from './navigation'
+import type { InsightsView } from './screens/InsightsScreen'
 import { DesireSheet } from './screens/DesireSheet'
 import { EntryDetail } from './screens/EntryDetail'
 import { EntryForm } from './screens/EntryForm'
 import { InsightsScreen } from './screens/InsightsScreen'
 import { JournalScreen } from './screens/JournalScreen'
 import { LockScreen } from './screens/LockScreen'
+import { MedicationSheet } from './screens/Medications'
 import { MissingJournal } from './screens/MissingJournal'
+import { PillLogPage } from './screens/PillLog'
 import { SettingsScreen } from './screens/SettingsScreen'
 import { TodayScreen } from './screens/TodayScreen'
 
@@ -157,6 +160,7 @@ function Journal({
   // A day opened from Insights: the Journal shows it in the calendar; null — the Journal as usual.
   const [journalDay, setJournalDay] = useState<string | null>(null)
   const [insightsPeriod, setInsightsPeriod] = useState<InsightsPeriod>('12w')
+  const [insightsView, setInsightsView] = useState<InsightsView>('libido')
   // Bumped after every change, so open screens reload their data.
   const [version, setVersion] = useState(0)
   const [settings, setSettings] = useState<Settings>()
@@ -198,6 +202,9 @@ function Journal({
             version={version}
             period={insightsPeriod}
             onPeriod={setInsightsPeriod}
+            view={insightsView}
+            onView={setInsightsView}
+            navigate={push}
             onOpenDay={(date) => {
               setJournalDay(date)
               setTab('journal')
@@ -205,7 +212,7 @@ function Journal({
           />
         )}
         {tab === 'settings' && (
-          <SettingsScreen settings={settings} onSettings={setSettings} lock={lock} onLockStatus={onLockStatus} onRestored={restored} onDeleted={onDeleted} />
+          <SettingsScreen version={version} navigate={push} settings={settings} onSettings={setSettings} lock={lock} onLockStatus={onLockStatus} onRestored={restored} onDeleted={onDeleted} />
         )}
       </div>
       <nav className="tab-bar" aria-label="Main">
@@ -263,6 +270,20 @@ function OverlayView({
       )
     case 'desire':
       return <DesireSheet date={overlay.date} onClose={pop} onSaved={done} />
+    case 'pills':
+      return (
+        <div className="page-layer">
+          <PillLogPage
+            medicationId={overlay.medicationId}
+            version={version}
+            onBack={pop}
+            onEdit={() => push({ type: 'medication', id: overlay.medicationId })}
+            onChanged={changed}
+          />
+        </div>
+      )
+    case 'medication':
+      return <MedicationSheet id={overlay.id} onClose={pop} onSaved={done} />
   }
 }
 

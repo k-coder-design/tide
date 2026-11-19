@@ -4,6 +4,7 @@ import { Icon } from '../components/Icon'
 import { useState } from 'react'
 import { KindBadge, RatingRow, useLoad } from '../components/controls'
 import { BackupSheet, lastBackupText } from './BackupSettings'
+import { BleedingCard, PillCards } from './CycleCards'
 import { api } from '../lib/client'
 import { addDays, dayMonth, longDate, today as todayKey, weekdayLetter, weekdayName } from '../lib/dates'
 import { KINDS } from '../lib/entries'
@@ -65,6 +66,8 @@ export function TodayScreen({
       </header>
       {error && <p className="error-text">{error}</p>}
 
+      {isToday && <PillCards version={version} navigate={navigate} onChanged={onChanged} />}
+
       <section className="card">
         <div className="card-head">
           <h2>Desire</h2>
@@ -78,6 +81,8 @@ export function TodayScreen({
         </div>
         <RatingRow label="Desire" max={DESIRE_MAX} value={shown?.date === day ? shown.desire : null} onChange={(n) => void setDesire(n)} />
       </section>
+
+      <BleedingCard day={day} version={version} onChanged={onChanged} />
 
       <section className="log-grid" aria-label="Log an entry">
         {KINDS.map((k) => (

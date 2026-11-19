@@ -8,5 +8,8 @@ export type Overlay =
   | { type: 'edit'; id: string }
   | { type: 'detail'; id: string }
   | { type: 'desire'; date: string }
+  | { type: 'pills'; medicationId: string }
+  /** null — a new medication. */
+  | { type: 'medication'; id: string | null }
 
 export type Navigate = (overlay: Overlay) => void

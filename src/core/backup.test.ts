@@ -85,6 +85,27 @@ describe('backups (phase 4)', () => {
     expect(await phone.restoreBackup(later, PASSWORD, 'merge')).toMatchObject({ added: 0, updated: 0 })
   })
 
+  it('merge carries the cycle (phase 6): medications, doses and symptom tags', async () => {
+    const other = (await start()).session
+    const course = api(other)['medications.create'](
+      { name: 'Pill', isContraceptive: true, regimen: 'continuous', startedOn: '2026-11-01', endedOn: null, intervalHours: 24, delayWindowHours: 3, usualTimeFrom: null, usualTimeTo: null, note: null },
+      TODAY
+    )
+    api(other)['pills.take']({ medicationId: course.id, takenAt: null, timeZone: 'Europe/Madrid' })
+    api(other)['cycle.setFlow']('2026-11-16', 'light')
+    api(other)['cycle.setSymptoms']('2026-11-16', ['cramps'])
+    await other.persist()
+    const file = await backupOf(other)
+
+    const phone = (await start()).session
+    api(phone)['cycle.setSymptoms']('2026-11-16', ['fatigue'])
+    await phone.persist()
+    // Medication, dose, check-in and one symptom tag; the local tag stays.
+    expect(await phone.restoreBackup(file, PASSWORD, 'merge')).toMatchObject({ added: 4 })
+    expect(api(phone)['cycle.day']('2026-11-16')).toMatchObject({ flow: 'light', symptoms: ['cramps', 'fatigue'] })
+    expect(api(phone)['pills.log'](course.id, 'Europe/Madrid').doses).toHaveLength(1)
+  })
+
   it('a file that is not a backup is refused and the journal stays', async () => {
     const { session } = await start()
     await logSolo(session)
