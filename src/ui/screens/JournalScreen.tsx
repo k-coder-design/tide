@@ -18,16 +18,16 @@ const FILTERS: ReadonlyArray<{ value: JournalFilter; label: string }> = [
   { value: 'checkins', label: 'Check-ins' }
 ]
 
-/** Journal (screen 4): a list by day with filters, or a month calendar. */
-export function JournalScreen({ version, navigate }: { version: number; navigate: Navigate }) {
-  const [view, setView] = useState<'list' | 'calendar'>('list')
+/** Journal (screen 4): a list by day with filters, or a month calendar. A `day` (opened from Insights) shows in the calendar. */
+export function JournalScreen({ version, navigate, day }: { version: number; navigate: Navigate; day?: string | null }) {
+  const [view, setView] = useState<'list' | 'calendar'>(day ? 'calendar' : 'list')
   return (
     <div className="screen journal">
       <header className="screen-header">
         <h1>Journal</h1>
         <Segmented label="Journal view" size="small" options={VIEWS} value={view} onChange={(v) => v && setView(v)} />
       </header>
-      {view === 'list' ? <JournalList version={version} navigate={navigate} /> : <JournalCalendar version={version} navigate={navigate} />}
+      {view === 'list' ? <JournalList version={version} navigate={navigate} /> : <JournalCalendar version={version} navigate={navigate} start={day ?? undefined} />}
     </div>
   )
 }
@@ -117,10 +117,10 @@ function JournalList({ version, navigate }: { version: number; navigate: Navigat
   )
 }
 
-function JournalCalendar({ version, navigate }: { version: number; navigate: Navigate }) {
+function JournalCalendar({ version, navigate, start }: { version: number; navigate: Navigate; start?: string }) {
   const today = todayKey()
-  const [month, setMonth] = useState(monthKey(today))
-  const [selected, setSelected] = useState(today)
+  const [month, setMonth] = useState(monthKey(start ?? today))
+  const [selected, setSelected] = useState(start ?? today)
   const { data: cells } = useLoad(() => api('journal.month', month), [month, version])
   const { data: day } = useLoad(() => api('journal.day', selected), [selected, version])
   const byDate = new Map((cells ?? []).map((cell: MonthDay) => [cell.date, cell]))

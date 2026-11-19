@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { DESIRE_MAX } from '../../shared/scales'
 import type { InsightsBucket, InsightsDay, InsightsPeriod, InsightsSpan, LibidoInsights } from '../../shared/types'
 import { Segmented, useLoad } from '../components/controls'
@@ -12,8 +11,17 @@ const PERIODS: ReadonlyArray<{ value: InsightsPeriod; label: string }> = [
 ]
 
 /** Insights — libido (screen 6, phase 5): activity, desire, activity by day, the last four weeks against the four before. */
-export function InsightsScreen({ version }: { version: number }) {
-  const [period, setPeriod] = useState<InsightsPeriod>('12w')
+export function InsightsScreen({
+  version,
+  period,
+  onPeriod,
+  onOpenDay
+}: {
+  version: number
+  period: InsightsPeriod
+  onPeriod: (period: InsightsPeriod) => void
+  onOpenDay: (date: string) => void
+}) {
   const today = todayKey()
   const { data, error } = useLoad(() => api('insights.libido', today, period), [today, period, version])
 
@@ -22,7 +30,7 @@ export function InsightsScreen({ version }: { version: number }) {
       <header className="screen-header">
         <h1>Insights</h1>
         <div className="period-picker">
-          <Segmented label="Period" options={PERIODS} value={period} onChange={(p) => p && setPeriod(p)} />
+          <Segmented label="Period" options={PERIODS} value={period} onChange={(p) => p && onPeriod(p)} />
         </div>
       </header>
       {error && <p className="error-text">{error}</p>}
@@ -36,7 +44,7 @@ export function InsightsScreen({ version }: { version: number }) {
         <>
           <ActivityCard data={data} />
           <DesireCard data={data} />
-          <HeatMapCard days={data.days} />
+          <HeatMapCard days={data.days} onOpenDay={onOpenDay} />
           <CompareCard current={data.compare.current} previous={data.compare.previous} hasFlow={data.hasFlow} />
         </>
       )}
@@ -136,8 +144,8 @@ function DesireCard({ data }: { data: LibidoInsights }) {
   )
 }
 
-/** Activity by day: one square a day, weeks as columns, Monday on top. Terracotta when a day had partnered sex. */
-function HeatMapCard({ days }: { days: InsightsDay[] }) {
+/** Activity by day: one square a day, weeks as columns, Monday on top. Terracotta when a day had partnered sex. A tap opens the day. */
+function HeatMapCard({ days, onOpenDay }: { days: InsightsDay[]; onOpenDay: (date: string) => void }) {
   const first = days[0]
   if (!first) return null
   const offset = (new Date(`${first.date}T00:00:00Z`).getUTCDay() + 6) % 7
@@ -152,13 +160,15 @@ function HeatMapCard({ days }: { days: InsightsDay[] }) {
           less <i className="heat l1" /> <i className="heat l2" /> <i className="heat l3" /> more
         </span>
       </div>
-      <div className="heatmap" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 14px))` }} role="img" aria-label="Entries per day">
+      <div className="heatmap" style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 14px))` }} role="group" aria-label="Entries per day">
         {cells.map((d, i) =>
           d ? (
-            <i
+            <button
               key={d.date}
+              type="button"
               className={`heat l${level(d)} ${d.partnered > 0 ? 'partnered' : ''}`}
-              title={`${d.date}: ${d.entries} ${d.entries === 1 ? 'entry' : 'entries'}`}
+              aria-label={`${dayLabel(d.date)}: ${d.entries} ${d.entries === 1 ? 'entry' : 'entries'}`}
+              onClick={() => onOpenDay(d.date)}
             />
           ) : (
             <i key={`pad-${i}`} className="heat pad" />
@@ -210,5 +220,6 @@ function delta(now: number | null, before: number | null): string {
 }
 
 const shortDate = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+const dayLabel = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' })
 const monthName = (date: string) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { month: 'short', timeZone: 'UTC' })
 const rangeLabel = (b: InsightsBucket, unit: 'week' | 'month') => (unit === 'week' ? `${shortDate(b.from)} – ${shortDate(b.to)}` : monthName(b.from))

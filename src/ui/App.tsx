@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { rememberTab, tabAfterUpdate } from '../offline'
-import type { LockStatus, Settings } from '../shared/types'
+import type { InsightsPeriod, LockStatus, Settings } from '../shared/types'
 import { Icon, type IconName } from './components/Icon'
 import { useLoad } from './components/controls'
 import { api, ApiError, onLocked } from './lib/client'
@@ -154,6 +154,9 @@ function Journal({
   })
   useEffect(() => rememberTab(tab), [tab])
   const [stack, setStack] = useState<Overlay[]>([])
+  // A day opened from Insights: the Journal shows it in the calendar; null — the Journal as usual.
+  const [journalDay, setJournalDay] = useState<string | null>(null)
+  const [insightsPeriod, setInsightsPeriod] = useState<InsightsPeriod>('12w')
   // Bumped after every change, so open screens reload their data.
   const [version, setVersion] = useState(0)
   const [settings, setSettings] = useState<Settings>()
@@ -189,8 +192,18 @@ function Journal({
     <main className="app">
       <div className="tab-content">
         {tab === 'today' && <TodayScreen version={version} navigate={push} onChanged={changed} onLock={lock.enabled ? onLock : undefined} />}
-        {tab === 'journal' && <JournalScreen version={version} navigate={push} />}
-        {tab === 'insights' && <InsightsScreen version={version} />}
+        {tab === 'journal' && <JournalScreen key={journalDay ?? 'usual'} version={version} navigate={push} day={journalDay} />}
+        {tab === 'insights' && (
+          <InsightsScreen
+            version={version}
+            period={insightsPeriod}
+            onPeriod={setInsightsPeriod}
+            onOpenDay={(date) => {
+              setJournalDay(date)
+              setTab('journal')
+            }}
+          />
+        )}
         {tab === 'settings' && (
           <SettingsScreen settings={settings} onSettings={setSettings} lock={lock} onLockStatus={onLockStatus} onRestored={restored} onDeleted={onDeleted} />
         )}
@@ -205,6 +218,7 @@ function Journal({
             onClick={() => {
               setTab(t.tab)
               setStack([])
+              setJournalDay(null)
             }}
           >
             <Icon name={t.icon} size={22} />
