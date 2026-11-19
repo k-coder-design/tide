@@ -190,7 +190,7 @@ function Journal({
       <div className="tab-content">
         {tab === 'today' && <TodayScreen version={version} navigate={push} onChanged={changed} onLock={lock.enabled ? onLock : undefined} />}
         {tab === 'journal' && <JournalScreen version={version} navigate={push} />}
-        {tab === 'insights' && <InsightsScreen />}
+        {tab === 'insights' && <InsightsScreen version={version} />}
         {tab === 'settings' && (
           <SettingsScreen settings={settings} onSettings={setSettings} lock={lock} onLockStatus={onLockStatus} onRestored={restored} onDeleted={onDeleted} />
         )}

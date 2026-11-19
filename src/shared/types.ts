@@ -74,6 +74,54 @@ export interface WeekSummary {
   desireAverage: number | null
 }
 
+/** Insights (phase 5): the range shown — 12 weeks by week, 6 months or a year by month. */
+export type InsightsPeriod = '12w' | '6m' | '1y'
+
+/** One bar: a 7-day stretch or a calendar month. */
+export interface InsightsBucket {
+  /** First and last day, inclusive; the last bucket ends today. */
+  from: string
+  to: string
+  partnered: number
+  other: number
+  /** Average of the rated days; null — none rated. */
+  desire: number | null
+  /** Any day with bleeding (light, medium, heavy or unspecified flow) — shaded on the desire chart. */
+  bleeding: boolean
+}
+
+/** A day of the heat map. */
+export interface InsightsDay {
+  date: string
+  entries: number
+  partnered: number
+}
+
+/** Counts for one side of the comparison. */
+export interface InsightsSpan {
+  from: string
+  to: string
+  partnered: number
+  other: number
+  desire: number | null
+  bleedingDays: number
+}
+
+export interface LibidoInsights {
+  period: InsightsPeriod
+  unit: 'week' | 'month'
+  buckets: InsightsBucket[]
+  /** Entries per week over the whole range. */
+  perWeek: { partnered: number; other: number }
+  days: InsightsDay[]
+  /** The last 28 days against the 28 before. */
+  compare: { current: InsightsSpan; previous: InsightsSpan }
+  /** Any flow recorded (from Tide or the Health import) — the bleeding row and shading show only then. */
+  hasFlow: boolean
+  /** Anything logged at all. */
+  hasData: boolean
+}
+
 export interface TodaySummary {
   desire: number | null
   week: WeekSummary

@@ -2,6 +2,8 @@ import type {
   BackupStatus,
   EventInput,
   HealthImportResult,
+  InsightsPeriod,
+  LibidoInsights,
   MergeResult,
   RestoreMode,
   LockStatus,
@@ -36,6 +38,7 @@ export interface ApiContract {
   'partners.setArchived'(id: string, archived: boolean): Partner
   'settings.get'(): Settings
   'settings.setTheme'(theme: Theme): Settings
+  'insights.libido'(today: string, period: InsightsPeriod): LibidoInsights
   'backup.status'(): BackupStatus
   /** After the backup file was saved or shared. */
   'backup.markDone'(): BackupStatus
@@ -79,6 +82,7 @@ const METHODS: ReadonlySet<string> = new Set<ApiMethod>([
   'partners.setArchived',
   'settings.get',
   'settings.setTheme',
+  'insights.libido',
   'backup.status',
   'backup.markDone',
   'backup.setReminder',
