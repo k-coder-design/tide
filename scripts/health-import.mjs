@@ -2,7 +2,7 @@
 /**
  * One-time import from Apple Health (T12, T27), run on the Mac:
  *
- *   npm run health-import -- ~/Downloads/export.zip
+ *   npm run health-import -- ~/Downloads/export.zip [--no-password]
  *
  * Reads export.xml from the Health export (the zip, an unzipped folder or the XML itself), keeps only menstrual flow,
  * intermenstrual bleeding (spotting) and contraceptive courses, and writes a small file encrypted with a password you
@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url'
 
 export const ITERATIONS = 600_000
 const MAGIC = [0x54, 0x49, 0x44, 0x48] // "TIDH"
+const PLAIN_MAGIC = [0x54, 0x49, 0x44, 0x4e] // "TIDN" — written without a password (T34)
 const PASSWORD_MIN = 8
 
 const FLOW = {
@@ -96,6 +97,16 @@ export async function sealHealthImport(data, password, iterations = ITERATIONS) 
   return out
 }
 
+/** The import data without a password (T34): "TIDN" · format 1 · the JSON as it is. Anyone with the file can read it. */
+export function plainHealthImport(data) {
+  const json = new TextEncoder().encode(JSON.stringify(data))
+  const out = new Uint8Array(5 + json.byteLength)
+  out.set(PLAIN_MAGIC, 0)
+  out[4] = 1
+  out.set(json, 5)
+  return out
+}
+
 /** export.xml as lines, from export.zip (through macOS unzip), an unzipped folder or the XML file. */
 function exportLines(input) {
   if (statSync(input).isDirectory()) {
@@ -124,7 +135,7 @@ function askHidden(question) {
 }
 
 async function main() {
-  const input = process.argv[2] ? resolve(process.argv[2].replace(/^~(?=$|\/)/, process.env.HOME ?? '~')) : null
+  const input = process.argv[2] && process.argv[2] !== '--no-password' ? resolve(process.argv[2].replace(/^~(?=$|\/)/, process.env.HOME ?? '~')) : null
   if (!input || !existsSync(input)) {
     console.error('Usage: npm run health-import -- ~/Downloads/export.zip')
     process.exit(1)
@@ -143,23 +154,24 @@ async function main() {
     process.exit(1)
   }
 
-  let password = process.env.TIDE_IMPORT_PASSWORD
-  if (!password) {
-    console.log(`Choose a password for the import file (${PASSWORD_MIN}+ characters). You will type it in Tide on the iPhone.`)
+  let password = process.argv.includes('--no-password') ? '' : process.env.TIDE_IMPORT_PASSWORD
+  if (password === undefined) {
+    console.log(`Choose a password for the import file (${PASSWORD_MIN}+ characters), or press Return for none. You will type it in Tide on the iPhone.`)
     password = await askHidden('Password: ')
-    if ((await askHidden('Repeat: ')) !== password) {
+    if (password && (await askHidden('Repeat: ')) !== password) {
       console.error('The passwords do not match.')
       process.exit(1)
     }
   }
-  if (password.length < PASSWORD_MIN) {
+  if (password && password.length < PASSWORD_MIN) {
     console.error(`The password needs at least ${PASSWORD_MIN} characters.`)
     process.exit(1)
   }
   const today = new Date().toLocaleDateString('sv') // YYYY-MM-DD, local
   const file = join(statSync(input).isDirectory() ? input : dirname(input), `tide-health-${today}.tidehealth`)
-  writeFileSync(file, await sealHealthImport(data, password))
+  writeFileSync(file, password ? await sealHealthImport(data, password) : plainHealthImport(data))
   console.log(`Saved ${file}`)
+  if (!password) console.log('No password: anyone with this file can read your bleeding history. Keep it private and delete it after the import.')
   console.log('Send it to the iPhone (AirDrop → Save to Files), then in Tide: Settings → Import from Apple Health…')
   console.log('Afterwards delete export.zip and the .tidehealth file from the Mac if you no longer need them.')
 }

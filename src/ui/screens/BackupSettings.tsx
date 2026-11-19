@@ -460,7 +460,7 @@ function HealthImportSheet({ onClose, onImported }: { onClose: () => void; onImp
             <ol className="steps">
               <li>In Health on this iPhone: your picture → Export All Health Data. AirDrop export.zip to your Mac.</li>
               <li>
-                On the Mac, in the Tide folder: <code>npm run health-import -- ~/Downloads/export.zip</code> and choose a password.
+                On the Mac, in the Tide folder: <code>npm run health-import -- ~/Downloads/export.zip</code> and choose a password, or press Return for none.
               </li>
               <li>AirDrop the .tidehealth file back to this iPhone → Save to Files, then choose it below — not export.zip itself.</li>
             </ol>
@@ -485,13 +485,13 @@ function HealthImportSheet({ onClose, onImported }: { onClose: () => void; onImp
               type="password"
               autoComplete="off"
               aria-label="Import file password"
-              placeholder="Password chosen on the Mac"
+              placeholder="Password, if you chose one on the Mac"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
             <p className="muted small">Only bleeding, spotting and contraceptive courses are read. Days already recorded in Tide are never changed.</p>
             {error && <p className="error-text">{error}</p>}
-            <button type="button" className="button primary push-bottom" disabled={!file || !password || busy} onClick={() => void run()}>
+            <button type="button" className="button primary push-bottom" disabled={!file || busy} onClick={() => void run()}>
               {busy ? 'Importing…' : 'Import'}
             </button>
           </>

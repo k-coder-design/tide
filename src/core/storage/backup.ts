@@ -17,6 +17,8 @@ const MAGIC = [0x54, 0x49, 0x44, 0x42] // "TIDB" — a backup
 const PLAIN_MAGIC = [0x54, 0x49, 0x44, 0x50]
 /** "TIDH" — an Apple Health import file, written on the Mac by scripts/health-import.mjs in the same layout (T27). */
 export const HEALTH_MAGIC = [0x54, 0x49, 0x44, 0x48]
+/** "TIDN" — a Health import file written without a password (T34): the header, then the JSON as it is. */
+export const PLAIN_HEALTH_MAGIC = [0x54, 0x49, 0x44, 0x4e]
 const FORMAT = 1
 const SALT_BYTES = 16
 const HEADER = 4 + 1 + 4 + SALT_BYTES
@@ -95,7 +97,17 @@ export async function openHealthFile(bytes: Uint8Array, password: string): Promi
   if (bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) {
     throw new DomainError('VALIDATION', 'This is the Health export itself. Turn it into a .tidehealth file on the Mac first (step 2), then choose that file.')
   }
-  const { plain } = await open(HEALTH_MAGIC, bytes, password, 'a Tide import file from Apple Health')
+  const file = new Uint8Array(bytes)
+  let plain: Uint8Array
+  if (file.byteLength > 5 && PLAIN_HEALTH_MAGIC.every((byte, i) => file[i] === byte)) {
+    if (file[4] !== FORMAT) throw new DomainError('VALIDATION', 'This file was made by a newer Tide. Update Tide, then try again.')
+    plain = file.slice(5)
+  } else {
+    if (HEALTH_MAGIC.every((byte, i) => file[i] === byte) && !password) {
+      throw new DomainError('VALIDATION', 'This import file is protected by a password. Enter the one chosen on the Mac.')
+    }
+    plain = (await open(HEALTH_MAGIC, file, password, 'a Tide import file from Apple Health')).plain
+  }
   try {
     return JSON.parse(new TextDecoder().decode(plain)) as unknown
   } catch {

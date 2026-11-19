@@ -7,4 +7,5 @@ export interface HealthImportData {
 }
 export const ITERATIONS: number
 export function collectHealth(lines: Iterable<string> | AsyncIterable<string>): Promise<HealthImportData>
+export function plainHealthImport(data: unknown): Uint8Array<ArrayBuffer>
 export function sealHealthImport(data: unknown, password: string, iterations?: number): Promise<Uint8Array<ArrayBuffer>>

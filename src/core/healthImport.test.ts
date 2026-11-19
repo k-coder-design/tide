@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { collectHealth, sealHealthImport } from '../../scripts/health-import.mjs'
+import { collectHealth, plainHealthImport, sealHealthImport } from '../../scripts/health-import.mjs'
 import { Session } from './session'
 import { loadSqlite, memoryKeys, memorySlots } from './testing'
 
@@ -68,6 +68,14 @@ describe('Apple Health import (T12, T27)', () => {
     expect(flowOf(session, '2026-10-20')).toEqual({ flow: 'light', source: 'health' })
 
     expect(await session.importHealth(file, PASSWORD)).toEqual({ bleedingDays: 0, spottingDays: 0, keptDays: 5, courses: 0, keptCourses: 2 })
+  })
+
+  it('without a password (T34): the plain file imports with no password; a protected one asks for it', async () => {
+    const session = await start()
+    const plain = plainHealthImport(await collectHealth(EXPORT))
+    expect(await session.importHealth(plain, '')).toMatchObject({ bleedingDays: 4, spottingDays: 1, courses: 2 })
+    const sealed = await sealHealthImport(await collectHealth(EXPORT), PASSWORD, 1000)
+    await expect(session.importHealth(sealed, '')).rejects.toThrow('protected by a password')
   })
 
   it('a backup file is not taken for an import file, nor the other way round', async () => {
