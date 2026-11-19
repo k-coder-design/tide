@@ -2,6 +2,9 @@ import type {
   BackupStatus,
   CycleDay,
   CycleInsights,
+  CycleMonth,
+  CycleReport,
+  ReportPeriod,
   LoggedFlow,
   Medication,
   MedicationInput,
@@ -58,6 +61,10 @@ export interface ApiContract {
   'cycle.setFlow'(date: string, flow: LoggedFlow | null): CycleDay
   'cycle.setSymptoms'(date: string, tags: SymptomTag[]): CycleDay
   'insights.cycle'(today: string): CycleInsights
+  /** The Cycle tab's calendar (T35). */
+  'cycle.month'(month: string, today: string): CycleMonth
+  /** Data for the cycle report PDF, drawn on the phone (T35). */
+  'reports.cycle'(today: string, period: ReportPeriod): CycleReport
   /** Medication courses (T6). */
   'medications.list'(today: string): Medication[]
   'medications.create'(input: MedicationInput, today: string): Medication
@@ -123,6 +130,8 @@ const METHODS: ReadonlySet<string> = new Set<ApiMethod>([
   'cycle.setFlow',
   'cycle.setSymptoms',
   'insights.cycle',
+  'cycle.month',
+  'reports.cycle',
   'medications.list',
   'medications.create',
   'medications.update',

@@ -87,7 +87,7 @@ When a day has several records the stronger flow wins. A day already recorded in
 
 ### `day_symptoms` — symptom tags by day (phase 6)
 
-As built (T32): code `src/core/domain/cycle.ts`, which also computes the bleeding episodes and the cycle insights.
+As built (T32): code `src/core/domain/cycle.ts`, which also computes the bleeding episodes and the cycle insights. Since T35 it also derives menstrual cycles (an episode's start to the day before the next start; the latest runs to today), the month calendar with the current cycle's day numbers, and the data for the cycle report. Nothing new is stored.
 
 | Column | Type | Notes |
 | --- | --- | --- |

@@ -18,7 +18,7 @@ const FILTERS: ReadonlyArray<{ value: JournalFilter; label: string }> = [
   { value: 'checkins', label: 'Check-ins' }
 ]
 
-/** Journal (screen 4): a list by day with filters, or a month calendar. A `day` (opened from Insights) shows in the calendar. */
+/** Journal (screen 4): a list by day with filters, or a month calendar. A `day` opens the calendar on that day. */
 export function JournalScreen({ version, navigate, day }: { version: number; navigate: Navigate; day?: string | null }) {
   const [view, setView] = useState<'list' | 'calendar'>(day ? 'calendar' : 'list')
   return (

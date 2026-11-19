@@ -5,12 +5,12 @@ import { Icon, type IconName } from './components/Icon'
 import { useLoad } from './components/controls'
 import { api, ApiError, onLocked } from './lib/client'
 import type { Overlay, Tab } from './navigation'
-import type { InsightsView } from './screens/InsightsScreen'
 import { DesireSheet } from './screens/DesireSheet'
 import { EntryDetail } from './screens/EntryDetail'
+import { CycleScreen } from './screens/CycleScreen'
 import { EntryForm } from './screens/EntryForm'
-import { InsightsScreen } from './screens/InsightsScreen'
 import { JournalScreen } from './screens/JournalScreen'
+import { LibidoScreen } from './screens/LibidoScreen'
 import { LockScreen } from './screens/LockScreen'
 import { MedicationSheet } from './screens/Medications'
 import { MissingJournal } from './screens/MissingJournal'
@@ -20,8 +20,9 @@ import { TodayScreen } from './screens/TodayScreen'
 
 const TABS: ReadonlyArray<{ tab: Tab; label: string; icon: IconName }> = [
   { tab: 'today', label: 'Today', icon: 'today' },
+  { tab: 'cycle', label: 'Cycle', icon: 'drop' },
+  { tab: 'libido', label: 'Libido', icon: 'desire' },
   { tab: 'journal', label: 'Journal', icon: 'journal' },
-  { tab: 'insights', label: 'Insights', icon: 'insights' },
   { tab: 'settings', label: 'Settings', icon: 'settings' }
 ]
 
@@ -157,10 +158,7 @@ function Journal({
   })
   useEffect(() => rememberTab(tab), [tab])
   const [stack, setStack] = useState<Overlay[]>([])
-  // A day opened from Insights: the Journal shows it in the calendar; null — the Journal as usual.
-  const [journalDay, setJournalDay] = useState<string | null>(null)
   const [insightsPeriod, setInsightsPeriod] = useState<InsightsPeriod>('12w')
-  const [insightsView, setInsightsView] = useState<InsightsView>('libido')
   // Bumped after every change, so open screens reload their data.
   const [version, setVersion] = useState(0)
   const [settings, setSettings] = useState<Settings>()
@@ -196,21 +194,9 @@ function Journal({
     <main className="app">
       <div className="tab-content">
         {tab === 'today' && <TodayScreen version={version} navigate={push} onChanged={changed} onLock={lock.enabled ? onLock : undefined} />}
-        {tab === 'journal' && <JournalScreen key={journalDay ?? 'usual'} version={version} navigate={push} day={journalDay} />}
-        {tab === 'insights' && (
-          <InsightsScreen
-            version={version}
-            period={insightsPeriod}
-            onPeriod={setInsightsPeriod}
-            view={insightsView}
-            onView={setInsightsView}
-            navigate={push}
-            onOpenDay={(date) => {
-              setJournalDay(date)
-              setTab('journal')
-            }}
-          />
-        )}
+        {tab === 'cycle' && <CycleScreen version={version} navigate={push} onChanged={changed} />}
+        {tab === 'libido' && <LibidoScreen version={version} period={insightsPeriod} onPeriod={setInsightsPeriod} navigate={push} onChanged={changed} />}
+        {tab === 'journal' && <JournalScreen version={version} navigate={push} />}
         {tab === 'settings' && (
           <SettingsScreen version={version} navigate={push} settings={settings} onSettings={setSettings} lock={lock} onLockStatus={onLockStatus} onRestored={restored} onDeleted={onDeleted} />
         )}
@@ -225,7 +211,6 @@ function Journal({
             onClick={() => {
               setTab(t.tab)
               setStack([])
-              setJournalDay(null)
             }}
           >
             <Icon name={t.icon} size={22} />

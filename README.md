@@ -1,6 +1,6 @@
 # Tide
 
-A private iPhone app for tracking libido dynamics: partnered sex, other sexual activity and daily desire. A Home Screen web app, data stays on the device. Version 0.6.2 (phase 6 — cycle and medications, part 1).
+A private iPhone app for tracking libido dynamics: partnered sex, other sexual activity and daily desire. A Home Screen web app, data stays on the device. Version 0.7.0 (phase 6 — cycle and medications: Cycle and Libido tabs, cycle report).
 
 Plan: [PLAN.md](PLAN.md). Data model: [docs/DATA_MODEL.md](docs/DATA_MODEL.md). Notes for AI agents: [AGENTS.md](AGENTS.md).
 

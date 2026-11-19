@@ -1,8 +1,20 @@
-import type { BleedingEpisode, CycleDay, CycleInsights, Flow, LoggedFlow, SymptomTag } from '../../shared/types'
+import type {
+  BleedingEpisode,
+  CycleDay,
+  CycleInsights,
+  CycleMonth,
+  CycleReport,
+  DesireByFlow,
+  Flow,
+  LoggedFlow,
+  MenstrualCycle,
+  ReportPeriod,
+  SymptomTag
+} from '../../shared/types'
 import { addDays, type Context } from './context'
 import { DomainError } from './errors'
 import { PillService } from './pills'
-import { checkDate, checkOneOf } from './validation'
+import { checkDate, checkMonth, checkOneOf } from './validation'
 
 export const LOGGED_FLOWS: readonly LoggedFlow[] = ['none', 'spotting', 'light', 'medium', 'heavy']
 export const SYMPTOMS: readonly SymptomTag[] = ['cramps', 'headache', 'bloating', 'breast_tenderness', 'acne', 'low_mood', 'irritability', 'fatigue']
@@ -11,7 +23,7 @@ export const isBleeding = (flow: Flow | null): boolean => flow === 'light' || fl
 const STRENGTH: Record<Flow, number> = { none: 0, spotting: 1, unspecified: 2, light: 3, medium: 4, heavy: 5 }
 /** Up to this many days without bleeding inside an episode do not break it; spotting this close counts as its own. */
 const GAP_DAYS = 2
-const MONTHS_SHOWN = 6
+const REPORT_PERIODS: readonly ReportPeriod[] = ['last3', 'last6', 'year', 'all']
 
 interface FlowRow {
   date: string
@@ -81,46 +93,66 @@ export class CycleService {
     const end = checkDate(today, 'Today')
     const rows = this.flowRows(end)
     const episodes = episodesOf(rows, end)
-    const finished = episodes.filter((e) => !e.ongoing)
-    const cycles = episodes.flatMap((e) => (e.cycle === null ? [] : [e.cycle]))
+    const cycles = cyclesOf(episodes, end)
+    const current = cycles[0]
+    return {
+      cycles,
+      ...averagesOf(cycles),
+      currentCycleDay: current ? current.length : null,
+      firstMonth: rows.find((r) => r.flow !== 'none')?.date.slice(0, 7) ?? null,
+      desireByFlow: this.desireByFlow(null, end),
+      pills: new PillService(this.ctx).summaries(end, 30),
+      hasFlow: rows.some((r) => r.flow !== 'none')
+    }
+  }
 
-    const months = Array.from({ length: MONTHS_SHOWN }, (_, i) => shiftMonth(end.slice(0, 7), i - MONTHS_SHOWN + 1)).map((month) => {
-      const inMonth = rows.filter((r) => r.date.startsWith(month))
-      return {
-        month,
-        bleedingDays: inMonth.filter((r) => isBleeding(r.flow)).length,
-        spottingDays: inMonth.filter((r) => r.flow === 'spotting').length
-      }
-    })
+  /** One month of the cycle calendar: flow on each day, cycle starts, and the current cycle's day numbers up to today. */
+  month(month: string, today: string): CycleMonth {
+    const prefix = checkMonth(month)
+    const end = checkDate(today, 'Today')
+    const rows = this.flowRows(end)
+    return monthOf(prefix, rows, episodesOf(rows, end), end)
+  }
 
-    const start = addDays(mondayOf(end), -7 * 11)
-    const byDate = new Map(rows.map((r) => [r.date, r.flow]))
-    const days = Array.from({ length: daysBetween(start, end) + 1 }, (_, i) => {
-      const date = addDays(start, i)
-      return { date, flow: byDate.get(date) ?? null }
-    })
+  /** The data for a cycle report over the chosen period (T35). Only reads; the phone draws the PDF. */
+  report(today: string, period: ReportPeriod): CycleReport {
+    const end = checkDate(today, 'Today')
+    const span = checkOneOf(period, REPORT_PERIODS, 'Period') ?? 'last6'
+    const rows = this.flowRows(end)
+    const episodes = episodesOf(rows, end)
+    const all = cyclesOf(episodes, end)
+    const firstFlow = rows.find((r) => r.flow !== 'none')?.date ?? end
+    let from: string
+    if (span === 'year') from = addDays(end, -364)
+    else if (span === 'all') from = firstFlow
+    else from = all[Math.min(span === 'last3' ? 2 : 5, all.length - 1)]?.start ?? firstFlow
+    const cycles = all.filter((c) => c.start >= from)
+    const months: CycleMonth[] = []
+    for (let m = from.slice(0, 7); m <= end.slice(0, 7); m = shiftMonth(m, 1)) months.push(monthOf(m, rows, episodes, end))
+    const symptoms = this.ctx.db
+      .prepare('SELECT tag, COUNT(*) AS days FROM day_symptoms WHERE date BETWEEN ? AND ? GROUP BY tag ORDER BY days DESC, tag')
+      .all(from, end) as Array<{ tag: SymptomTag; days: number }>
+    return {
+      madeOn: end,
+      from,
+      to: end,
+      cycles,
+      ...averagesOf(cycles),
+      months,
+      symptoms,
+      pills: new PillService(this.ctx).summaries(end, daysBetween(from, end) + 1),
+      desireByFlow: this.desireByFlow(from, end)
+    }
+  }
 
-    const rated = this.ctx.db.prepare('SELECT flow, desire FROM daily_checkins WHERE desire IS NOT NULL AND date <= ?').all(end) as Array<{
-      flow: Flow | null
-      desire: number
-    }>
-    const desireByFlow = {
+  private desireByFlow(from: string | null, to: string): DesireByFlow {
+    const rated = this.ctx.db
+      .prepare('SELECT flow, desire FROM daily_checkins WHERE desire IS NOT NULL AND (@from IS NULL OR date >= @from) AND date <= @to')
+      .all({ from, to }) as Array<{ flow: Flow | null; desire: number }>
+    return {
       bleeding: average(rated.filter((r) => isBleeding(r.flow)).map((r) => r.desire)),
       spotting: average(rated.filter((r) => r.flow === 'spotting').map((r) => r.desire)),
       other: average(rated.filter((r) => !isBleeding(r.flow) && r.flow !== 'spotting').map((r) => r.desire))
-    }
-
-    return {
-      episodes: [...episodes].reverse(),
-      averageEpisode: finished.length ? Math.round(finished.reduce((s, e) => s + e.days, 0) / finished.length) : null,
-      averageCycle: cycles.length ? Math.round(cycles.reduce((s, c) => s + c, 0) / cycles.length) : null,
-      cycleRange: cycles.length ? { min: Math.min(...cycles), max: Math.max(...cycles) } : null,
-      months,
-      days,
-      desireByFlow,
-      pills: new PillService(this.ctx).summaries(end, 30),
-      historyFrom: rows.find((r) => r.flow !== 'none')?.date ?? null,
-      hasFlow: rows.some((r) => r.flow !== 'none')
     }
   }
 
@@ -165,13 +197,64 @@ export function episodesOf(rows: FlowRow[], today: string): BleedingEpisode[] {
   return episodes
 }
 
-export function daysBetween(from: string, to: string): number {
-  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
+/** Cycles newest first: each episode starts one; it ends the day before the next one starts (T35). */
+export function cyclesOf(episodes: BleedingEpisode[], today: string): MenstrualCycle[] {
+  return episodes
+    .map((e, i) => {
+      const next = episodes[i + 1]
+      return {
+        start: e.start,
+        end: next ? addDays(next.start, -1) : null,
+        bleedingDays: e.days,
+        bleedingOngoing: e.ongoing,
+        length: next ? daysBetween(e.start, next.start) : daysBetween(e.start, today) + 1,
+        strongest: e.strongest,
+        spottingDays: e.spottingDays,
+        fromHealth: e.fromHealth
+      }
+    })
+    .reverse()
 }
 
-function mondayOf(date: string): string {
-  const weekday = (new Date(`${date}T00:00:00Z`).getUTCDay() + 6) % 7
-  return addDays(date, -weekday)
+/** Bleeding over episodes that have ended, length over finished cycles, both rounded to whole days. */
+function averagesOf(cycles: MenstrualCycle[]): Pick<CycleInsights, 'averageBleeding' | 'averageCycle' | 'cycleRange'> {
+  const bleeding = cycles.filter((c) => !c.bleedingOngoing).map((c) => c.bleedingDays)
+  const lengths = cycles.filter((c) => c.end !== null).map((c) => c.length)
+  const mean = (xs: number[]) => (xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null)
+  return {
+    averageBleeding: mean(bleeding),
+    averageCycle: mean(lengths),
+    cycleRange: lengths.length ? { min: Math.min(...lengths), max: Math.max(...lengths) } : null
+  }
+}
+
+function monthOf(month: string, rows: FlowRow[], episodes: BleedingEpisode[], today: string): CycleMonth {
+  const byDate = new Map(rows.map((r) => [r.date, r.flow]))
+  const starts = new Set(episodes.map((e) => e.start))
+  const current = episodes.at(-1)?.start ?? null
+  const [year, m] = month.split('-').map(Number) as [number, number]
+  const count = new Date(Date.UTC(year, m, 0)).getUTCDate()
+  const days = Array.from({ length: count }, (_, i) => {
+    const date = `${month}-${String(i + 1).padStart(2, '0')}`
+    const inCurrent = current !== null && date >= current && date <= today
+    return {
+      date,
+      flow: date <= today ? (byDate.get(date) ?? null) : null,
+      startsCycle: starts.has(date),
+      currentCycleDay: inCurrent ? daysBetween(current, date) + 1 : null
+    }
+  })
+  return {
+    month,
+    days,
+    bleedingDays: days.filter((d) => isBleeding(d.flow)).length,
+    spottingDays: days.filter((d) => d.flow === 'spotting').length,
+    cycleStarts: days.filter((d) => d.startsCycle).map((d) => d.date)
+  }
+}
+
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000)
 }
 
 function shiftMonth(month: string, by: number): string {

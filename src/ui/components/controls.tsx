@@ -129,7 +129,8 @@ export function SheetHeader({ title, onClose }: { title: string; onClose: () => 
  * A full-height sheet sliding over the current screen. Rendered at the end of <body>: on iOS a scrolling screen
  * (-webkit-overflow-scrolling) traps fixed children, and the tab bar would cover the sheet's bottom.
  */
-export function Sheet({ children, label, onClose }: { children: ReactNode; label: string; onClose: () => void }) {
+/** `fit` — as tall as its content (a day from a calendar), so the screen behind stays in view. */
+export function Sheet({ children, label, onClose, fit = false }: { children: ReactNode; label: string; onClose: () => void; fit?: boolean }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
@@ -137,7 +138,7 @@ export function Sheet({ children, label, onClose }: { children: ReactNode; label
   }, [onClose])
   return createPortal(
     <div className="sheet-backdrop" onClick={(event) => event.target === event.currentTarget && onClose()}>
-      <section className="sheet" role="dialog" aria-modal="true" aria-label={label}>
+      <section className={`sheet ${fit ? 'fit' : ''}`} role="dialog" aria-modal="true" aria-label={label}>
         <span className="grabber" aria-hidden="true" />
         {children}
       </section>

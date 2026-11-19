@@ -3,6 +3,7 @@ import type { BackupStatus, HealthImportResult, LockStatus, MergeResult, Restore
 import { Icon } from '../components/Icon'
 import { ConfirmSheet, Segmented, Sheet, SheetHeader, Switch, useLoad } from '../components/controls'
 import { api } from '../lib/client'
+import { download } from '../lib/share'
 
 const PASSWORD_MIN = 8
 
@@ -448,7 +449,7 @@ function HealthImportSheet({ onClose, onImported }: { onClose: () => void; onImp
               {plural(result.courses, 'contraceptive course', 'contraceptive courses')} were added.
               {result.keptDays + result.keptCourses > 0 &&
                 ` ${plural(result.keptDays + result.keptCourses, 'item was', 'items were')} already in Tide and kept as it was.`}{' '}
-              See them in Insights → Cycle; give the imported course its real name in Settings → Medications.
+              See them in the Cycle tab; give the imported course its real name in Settings → Medications.
             </p>
             <p className="muted small">You can now delete export.zip and the import file from the Mac and from Files.</p>
             <button type="button" className="button primary push-bottom" onClick={onClose}>
@@ -574,16 +575,6 @@ function localDate(): string {
   const now = new Date()
   const pad = (n: number) => String(n).padStart(2, '0')
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-}
-
-/** Where the Share sheet is missing (desktop browsers): a plain download. */
-function download(file: File): void {
-  const url = URL.createObjectURL(file)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = file.name
-  link.click()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }
 
 function message(reason: unknown): string {

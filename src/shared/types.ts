@@ -275,24 +275,84 @@ export interface PillSummary {
   missed: number
 }
 
-/** Insights — cycle (phase 6, T13). Numbers only: no predictions, no advice. */
+/** A menstrual cycle (T35): from one episode's first bleeding day to the day before the next one's. */
+export interface MenstrualCycle {
+  start: string
+  /** The day before the next cycle starts; null — the current cycle, still running. */
+  end: string | null
+  /** First to last bleeding day of its episode, inclusive. */
+  bleedingDays: number
+  /** The episode may go on (its last bleeding day was within 2 days of today). */
+  bleedingOngoing: boolean
+  /** Days from this start to the next one; for the current cycle, the days so far including today. */
+  length: number
+  strongest: Flow
+  /** Spotting counted for its episode (T18). */
+  spottingDays: number
+  fromHealth: boolean
+}
+
+export interface CycleCalendarDay {
+  date: string
+  flow: Flow | null
+  startsCycle: boolean
+  /** Day of the current cycle, up to today; null outside it. */
+  currentCycleDay: number | null
+}
+
+/** One month of the cycle calendar (T35); days after today have no flow. */
+export interface CycleMonth {
+  month: string
+  days: CycleCalendarDay[]
+  bleedingDays: number
+  spottingDays: number
+  /** First days of cycles in this month. */
+  cycleStarts: string[]
+}
+
+export interface DesireByFlow {
+  bleeding: number | null
+  spotting: number | null
+  other: number | null
+}
+
+/** The Cycle tab (T13, T35). Numbers only: no predictions, no advice. */
 export interface CycleInsights {
-  /** Newest first. */
-  episodes: BleedingEpisode[]
-  averageEpisode: number | null
+  /** Newest first; the first one is the current cycle. */
+  cycles: MenstrualCycle[]
+  /** Over episodes that have ended. */
+  averageBleeding: number | null
+  /** Over finished cycles. */
   averageCycle: number | null
   cycleRange: { min: number; max: number } | null
-  /** The last 6 calendar months, the current one up to today. */
-  months: Array<{ month: string; bleedingDays: number; spottingDays: number }>
-  /** Monday 11 weeks back up to today. */
-  days: Array<{ date: string; flow: Flow | null }>
+  currentCycleDay: number | null
+  /** The earliest month with recorded flow, for the calendar's back arrow; null — none. */
+  firstMonth: string | null
   /** Average desire on bleeding days, spotting days and other rated days. */
-  desireByFlow: { bleeding: number | null; spotting: number | null; other: number | null }
+  desireByFlow: DesireByFlow
   /** Pills over the last 30 days, per tracked medication. */
   pills: PillSummary[]
-  /** Earliest recorded flow; null — none. */
-  historyFrom: string | null
   hasFlow: boolean
+}
+
+export type ReportPeriod = 'last3' | 'last6' | 'year' | 'all'
+
+/** Everything a cycle report (PDF, T35) can hold, for the chosen period. The phone draws it; nothing is sent. */
+export interface CycleReport {
+  madeOn: string
+  from: string
+  to: string
+  /** Cycles that start in the period, newest first. */
+  cycles: MenstrualCycle[]
+  averageBleeding: number | null
+  averageCycle: number | null
+  cycleRange: { min: number; max: number } | null
+  /** Oldest first, from the period's first month to this one. */
+  months: CycleMonth[]
+  /** Days each symptom was recorded in the period, most frequent first. */
+  symptoms: Array<{ tag: SymptomTag; days: number }>
+  pills: PillSummary[]
+  desireByFlow: DesireByFlow
 }
 
 /** LOCKED — Tide is locked; WRONG_PIN — the PIN did not match; WAIT — too many wrong PINs, try later. */

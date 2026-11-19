@@ -1,6 +1,7 @@
 import type { EventKind } from '../shared/types'
 
-export type Tab = 'today' | 'journal' | 'insights' | 'settings'
+/** T35: Today first, then Cycle and Libido, each with its own calendar. */
+export type Tab = 'today' | 'cycle' | 'libido' | 'journal' | 'settings'
 
 /** Screens and sheets opened over the tabs. */
 export type Overlay =

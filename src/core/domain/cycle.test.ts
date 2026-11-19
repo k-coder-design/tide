@@ -84,7 +84,7 @@ describe('cycle — bleeding episodes', () => {
     ])
   })
 
-  it('insights: episodes newest first, averages, months, days, desire by flow, history start', () => {
+  it('insights: cycles newest first, averages over finished ones, desire by flow, first month', () => {
     const { ctx, cycle, checkins } = setup()
     health(ctx, '2026-09-13', 'medium')
     health(ctx, '2026-09-14', 'medium')
@@ -99,17 +99,61 @@ describe('cycle — bleeding episodes', () => {
     checkins.setDesire('2026-11-16', 4)
 
     const insights = cycle.insights(TODAY)
-    expect(insights.episodes.map((e) => e.start)).toEqual(['2026-11-06', '2026-10-10', '2026-09-13'])
-    expect(insights.averageEpisode).toBe(2) // (2 + 3 + 1) / 3; 6 Nov has ended — more than 2 days ago
-    expect(insights.averageCycle).toBe(27) // 27 and 27
+    expect(insights.cycles).toEqual([
+      { start: '2026-11-06', end: null, bleedingDays: 1, bleedingOngoing: false, length: 14, strongest: 'light', spottingDays: 0, fromHealth: false },
+      { start: '2026-10-10', end: '2026-11-05', bleedingDays: 3, bleedingOngoing: false, length: 27, strongest: 'light', spottingDays: 0, fromHealth: true },
+      { start: '2026-09-13', end: '2026-10-09', bleedingDays: 2, bleedingOngoing: false, length: 27, strongest: 'medium', spottingDays: 0, fromHealth: true }
+    ])
+    expect(insights.averageBleeding).toBe(2) // (1 + 3 + 2) / 3; 6 Nov has ended — more than 2 days ago
+    expect(insights.averageCycle).toBe(27) // the current cycle is left out
     expect(insights.cycleRange).toEqual({ min: 27, max: 27 })
-    expect(insights.months.map((m) => m.month)).toEqual(['2026-06', '2026-07', '2026-08', '2026-09', '2026-10', '2026-11'])
-    expect(insights.months[4]).toEqual({ month: '2026-10', bleedingDays: 3, spottingDays: 1 })
-    expect(insights.days[0]!.date).toBe('2026-08-31') // a Monday, 11 weeks before this week's
-    expect(insights.days.at(-1)).toEqual({ date: TODAY, flow: null })
+    expect(insights.currentCycleDay).toBe(14)
+    expect(insights.firstMonth).toBe('2026-09')
     expect(insights.desireByFlow).toEqual({ bleeding: 2, spotting: 4, other: 4.5 })
-    expect(insights.historyFrom).toBe('2026-09-13')
     expect(insights.hasFlow).toBe(true)
+  })
+
+  it('month: flow per day, cycle starts, and day numbers for the current cycle up to today only (T35)', () => {
+    const { cycle } = setup()
+    cycle.setFlow('2026-10-21', 'medium')
+    cycle.setFlow('2026-11-04', 'spotting')
+    cycle.setFlow('2026-11-05', 'heavy')
+    cycle.setFlow('2026-11-06', 'light')
+    const nov = cycle.month('2026-11', TODAY)
+    expect(nov.days).toHaveLength(30)
+    expect(nov.days[3]).toEqual({ date: '2026-11-04', flow: 'spotting', startsCycle: false, currentCycleDay: null })
+    expect(nov.days[4]).toEqual({ date: '2026-11-05', flow: 'heavy', startsCycle: true, currentCycleDay: 1 })
+    expect(nov.days[18]).toMatchObject({ date: TODAY, currentCycleDay: 15 })
+    expect(nov.days[19]).toMatchObject({ flow: null, currentCycleDay: null })
+    expect(nov).toMatchObject({ bleedingDays: 2, spottingDays: 1, cycleStarts: ['2026-11-05'] })
+    // October's cycle is over, so its days carry no numbers.
+    expect(cycle.month('2026-10', TODAY).days[20]).toEqual({ date: '2026-10-21', flow: 'medium', startsCycle: true, currentCycleDay: null })
+    expect(() => cycle.month('2026-13', TODAY)).toThrow()
+  })
+
+  it('report: the chosen number of cycles, their months, symptoms and pills over the period (T35)', () => {
+    const { cycle, medications } = setup()
+    for (const start of ['2026-06-01', '2026-07-01', '2026-08-01', '2026-09-01', '2026-10-01', '2026-11-01']) cycle.setFlow(start, 'medium')
+    cycle.setSymptoms('2026-10-01', ['cramps', 'fatigue'])
+    cycle.setSymptoms('2026-11-01', ['cramps'])
+    cycle.setSymptoms('2026-07-01', ['acne'])
+    medications.create(course({ startedOn: '2026-09-01' }), TODAY)
+
+    const last3 = cycle.report(TODAY, 'last3')
+    expect(last3.from).toBe('2026-09-01')
+    expect(last3.cycles.map((c) => c.start)).toEqual(['2026-11-01', '2026-10-01', '2026-09-01'])
+    expect(last3.months.map((m) => m.month)).toEqual(['2026-09', '2026-10', '2026-11'])
+    expect(last3.symptoms).toEqual([
+      { tag: 'cramps', days: 2 },
+      { tag: 'fatigue', days: 1 }
+    ])
+    expect(last3.averageCycle).toBe(31) // 30 and 31 days, rounded half up
+    expect(last3.pills).toHaveLength(1)
+
+    expect(cycle.report(TODAY, 'all').from).toBe('2026-06-01')
+    expect(cycle.report(TODAY, 'last6').cycles).toHaveLength(6)
+    expect(cycle.report(TODAY, 'year').from).toBe('2025-11-20')
+    expect(() => cycle.report(TODAY, 'decade' as never)).toThrow('Period is not valid')
   })
 })
 

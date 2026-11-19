@@ -1,4 +1,4 @@
-import type { Flow, LoggedFlow, Regimen, SymptomTag } from '../../shared/types'
+import type { Flow, LoggedFlow, MenstrualCycle, Regimen, SymptomTag } from '../../shared/types'
 
 /** Labels for the cycle section (phase 6). Which flow counts as bleeding is decided in the core (T18). */
 export const FLOW_OPTIONS: ReadonlyArray<{ value: LoggedFlow; label: string }> = [
@@ -45,3 +45,21 @@ export function duration(minutes: number): string {
 
 /** Hours without trailing zeros: 24 → "24 h", 1.5 → "1.5 h". */
 export const hours = (value: number): string => `${Number(value.toFixed(2))} h`
+
+/** "21 Oct – 17 Nov", "4 – 30 Sep", "18 Nov – now". */
+export function cycleDates(c: MenstrualCycle): string {
+  const fmt = (date: string, o: Intl.DateTimeFormatOptions) => new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { ...o, timeZone: 'UTC' })
+  const short = (d: string) => fmt(d, { day: 'numeric', month: 'short' })
+  if (c.end === null) return `${short(c.start)} – now`
+  const sameMonth = c.start.slice(0, 7) === c.end.slice(0, 7)
+  // Cycles from earlier years carry the year, so a long history stays readable.
+  const year = c.end.slice(0, 4) === String(new Date().getFullYear()) ? '' : ` ${c.end.slice(0, 4)}`
+  return `${sameMonth ? fmt(c.start, { day: 'numeric' }) : short(c.start)} – ${short(c.end)}${year}`
+}
+
+/** "heavy · +2 spotting · Health · current". */
+export function cycleNote(c: MenstrualCycle): string {
+  return [flowLabel(c.strongest).toLowerCase(), c.spottingDays ? `+${c.spottingDays} spotting` : null, c.fromHealth ? 'Health' : null, c.end === null ? 'current' : null]
+    .filter(Boolean)
+    .join(' · ')
+}

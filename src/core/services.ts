@@ -48,6 +48,8 @@ export function createHandlers(ctx: Context): ApiHandlers {
     'cycle.setFlow': (date, flow) => cycle.setFlow(date, flow),
     'cycle.setSymptoms': (date, tags) => cycle.setSymptoms(date, tags),
     'insights.cycle': (today) => cycle.insights(today),
+    'cycle.month': (month, today) => cycle.month(month, today),
+    'reports.cycle': (today, period) => cycle.report(today, period),
     'medications.list': (today) => medications.list(today),
     'medications.create': (input, today) => medications.create(input, today),
     'medications.update': (id, input, today) => medications.update(id, input, today),

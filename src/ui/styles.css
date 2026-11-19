@@ -843,6 +843,11 @@ h2 {
   animation: slide-up 0.22s ease-out;
 }
 
+.sheet.fit {
+  height: auto;
+  max-height: calc(100% - env(safe-area-inset-top) - 12px);
+}
+
 .grabber {
   width: 36px;
   height: 5px;
@@ -1551,73 +1556,6 @@ html.covered body::after {
   stroke-width: 2;
 }
 
-.heatmap {
-  display: grid;
-  grid-template-rows: repeat(7, auto);
-  grid-auto-flow: column;
-  gap: 3px;
-}
-
-.heat {
-  display: block;
-  aspect-ratio: 1;
-  border-radius: 3px;
-  background: var(--segment);
-}
-
-.heat-legend {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.heat-legend .heat {
-  width: 10px;
-}
-
-.heat.pad {
-  background: transparent;
-}
-
-button.heat {
-  width: 100%;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-
-button.heat:active,
-button.heat:focus-visible {
-  outline: 2px solid var(--ink);
-  outline-offset: 1px;
-}
-
-.heat.l1 {
-  background: color-mix(in srgb, var(--teal) 35%, var(--segment));
-}
-
-.heat.l2 {
-  background: color-mix(in srgb, var(--teal) 65%, var(--segment));
-}
-
-.heat.l3 {
-  background: var(--teal);
-}
-
-.heat.partnered.l1 {
-  background: color-mix(in srgb, var(--terracotta) 40%, var(--segment));
-}
-
-.heat.partnered.l2 {
-  background: color-mix(in srgb, var(--terracotta) 70%, var(--segment));
-}
-
-.heat.partnered.l3 {
-  background: var(--terracotta);
-}
-
 .compare {
   gap: 0;
   padding-bottom: 4px;
@@ -1963,66 +1901,11 @@ button.heat:focus-visible {
   color: var(--ink);
 }
 
-.mini-switch .segmented button {
-  white-space: nowrap;
-  height: 28px;
-  font-size: 12px;
-  padding: 0 10px;
-}
-
-.flow-months {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  height: 120px;
-}
-
-.flow-month {
-  flex: 1 1 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-}
-
-.flow-stack {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.flow-stack .bar-part {
-  display: block;
-  border-radius: 4px;
-}
-
-.berry-soft {
-  color: color-mix(in srgb, var(--berry) 70%, var(--surface));
-}
-
-.flow-days {
-  display: grid;
-  grid-template-rows: repeat(7, 13px);
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(0, 1fr);
-  gap: 3px 4px;
-}
-
 .flow-day {
   display: block;
   border-radius: 3px;
   box-sizing: border-box;
   border: 1px solid transparent;
-}
-
-.flow-day.none {
-  background: var(--segment);
-}
-
-.flow-day.unrecorded {
-  background: transparent;
-  border: 1px dashed var(--faint);
 }
 
 .legend.wrap {
@@ -2062,3 +1945,183 @@ button.heat:focus-visible {
 .field-button {
   gap: 8px;
 }
+
+/* T35 — the Cycle and Libido tabs: month calendars with a day sheet, the cycles table, the report. */
+
+.cycle-cell.spotting {
+  background: var(--spotting);
+}
+
+.cycle-cell.light {
+  background: color-mix(in srgb, var(--berry) 40%, var(--surface));
+}
+
+.cycle-cell.unspecified {
+  background: color-mix(in srgb, var(--berry) 55%, var(--surface));
+  color: var(--surface);
+}
+
+.cycle-cell.medium {
+  background: color-mix(in srgb, var(--berry) 70%, var(--surface));
+  color: var(--surface);
+}
+
+.cycle-cell.heavy {
+  background: var(--berry);
+  color: var(--surface);
+}
+
+.calendar-cell.starts {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--berry) 55%, var(--ink));
+  font-weight: 800;
+}
+
+.cycle-cell.today,
+.desire-cell.today {
+  border-color: var(--teal);
+  font-weight: 800;
+}
+
+.cycle-cell.today:not(.medium, .heavy, .unspecified),
+.desire-cell.today:not(.d4, .d5) {
+  color: var(--ink);
+}
+
+.cycle-cell {
+  gap: 1px;
+}
+
+.cycle-day-no {
+  min-height: 9px;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.cycle-cell.medium .cycle-day-no,
+.cycle-cell.heavy .cycle-day-no,
+.cycle-cell.unspecified .cycle-day-no {
+  color: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+.legend .cycle-day-no {
+  min-height: 0;
+}
+
+.swatch.ring-swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--berry) 55%, var(--ink));
+}
+
+.episode-row .num small {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.episode-head,
+.episode-row {
+  grid-template-columns: 16px minmax(0, 1fr) 64px 56px;
+}
+
+.episode-dates {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.episode-dates .muted {
+  max-width: 100%;
+}
+
+.episode-row {
+  min-height: 50px;
+}
+
+.episodes .button-pair .button {
+  height: 42px;
+  font-size: 14px;
+  gap: 6px;
+}
+
+.button.berry {
+  background: var(--berry);
+  color: var(--on-accent);
+  gap: 6px;
+}
+
+.check-box {
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border-radius: 7px;
+  border: 1.5px solid var(--faint);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--on-accent);
+}
+
+.check-box.on {
+  background: var(--berry);
+  border-color: var(--berry);
+}
+
+.desire-cell.d1 {
+  background: color-mix(in srgb, var(--teal) 12%, var(--surface));
+}
+
+.desire-cell.d2 {
+  background: color-mix(in srgb, var(--teal) 28%, var(--surface));
+}
+
+.desire-cell.d3 {
+  background: color-mix(in srgb, var(--teal) 48%, var(--surface));
+}
+
+.desire-cell.d4 {
+  background: color-mix(in srgb, var(--teal) 75%, var(--surface));
+  color: var(--surface);
+}
+
+.desire-cell.d5 {
+  background: var(--teal);
+  color: var(--surface);
+}
+
+.desire-cell:is(.d3, .d4, .d5) .dot:is(.teal, .terracotta) {
+  box-shadow: 0 0 0 1px var(--surface);
+}
+
+.desire-scale {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.desire-scale i {
+  width: 16px;
+  height: 11px;
+  border-radius: 3px;
+  font-style: normal;
+  font-size: 8px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.day-sheet-add {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.day-sheet-add .button {
+  height: 38px;
+  font-size: 13px;
+  padding: 0;
+}
+

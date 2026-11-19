@@ -19,7 +19,8 @@ const PATHS = {
   clock: 'M4 12a8 8 0 1 0 16 0a8 8 0 1 0 -16 0M12 8v4l3 2',
   check: 'M5 12l5 5L20 7',
   alert: 'M12 8v5M12 17h.01',
-  drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z'
+  drop: 'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',
+  download: 'M12 4v11M7 10l5 5 5-5M5 20h14'
 } as const
 
 export type IconName = keyof typeof PATHS
