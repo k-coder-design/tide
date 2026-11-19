@@ -91,6 +91,10 @@ export async function openBackup(bytes: Uint8Array, password: string): Promise<{
 
 /** The JSON inside a Health import file (T27). */
 export async function openHealthFile(bytes: Uint8Array, password: string): Promise<unknown> {
+  // A zip ("PK\x03\x04") is the Health export itself, too large for the phone: it goes through the Mac script first.
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b && bytes[2] === 0x03 && bytes[3] === 0x04) {
+    throw new DomainError('VALIDATION', 'This is the Health export itself. Turn it into a .tidehealth file on the Mac first (step 2), then choose that file.')
+  }
   const { plain } = await open(HEALTH_MAGIC, bytes, password, 'a Tide import file from Apple Health')
   try {
     return JSON.parse(new TextDecoder().decode(plain)) as unknown

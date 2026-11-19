@@ -448,7 +448,7 @@ function HealthImportSheet({ onClose, onImported }: { onClose: () => void; onImp
               {plural(result.courses, 'contraceptive course', 'contraceptive courses')} were added.
               {result.keptDays + result.keptCourses > 0 &&
                 ` ${plural(result.keptDays + result.keptCourses, 'item was', 'items were')} already in Tide and kept as it was.`}{' '}
-              They appear with the cycle section in a coming update.
+              See them in Insights → Cycle; give the imported course its real name in Settings → Medications.
             </p>
             <p className="muted small">You can now delete export.zip and the import file from the Mac and from Files.</p>
             <button type="button" className="button primary push-bottom" onClick={onClose}>
@@ -462,7 +462,7 @@ function HealthImportSheet({ onClose, onImported }: { onClose: () => void; onImp
               <li>
                 On the Mac, in the Tide folder: <code>npm run health-import -- ~/Downloads/export.zip</code> and choose a password.
               </li>
-              <li>AirDrop the .tidehealth file back to this iPhone → Save to Files, then choose it below.</li>
+              <li>AirDrop the .tidehealth file back to this iPhone → Save to Files, then choose it below — not export.zip itself.</li>
             </ol>
             <input
               ref={input}

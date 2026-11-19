@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import type { TideEvent } from '../../shared/types'
 import { entrySummary, kindInfo } from '../lib/entries'
 import { Icon, type IconName } from './Icon'
@@ -124,20 +125,24 @@ export function SheetHeader({ title, onClose }: { title: string; onClose: () => 
   )
 }
 
-/** A full-height sheet sliding over the current screen. */
+/**
+ * A full-height sheet sliding over the current screen. Rendered at the end of <body>: on iOS a scrolling screen
+ * (-webkit-overflow-scrolling) traps fixed children, and the tab bar would cover the sheet's bottom.
+ */
 export function Sheet({ children, label, onClose }: { children: ReactNode; label: string; onClose: () => void }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => event.key === 'Escape' && onClose()
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
-  return (
+  return createPortal(
     <div className="sheet-backdrop" onClick={(event) => event.target === event.currentTarget && onClose()}>
       <section className="sheet" role="dialog" aria-modal="true" aria-label={label}>
         <span className="grabber" aria-hidden="true" />
         {children}
       </section>
-    </div>
+    </div>,
+    document.body
   )
 }
 
@@ -155,7 +160,7 @@ export function ConfirmSheet({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  return (
+  return createPortal(
     <div className="sheet-backdrop" onClick={(event) => event.target === event.currentTarget && onCancel()}>
       <section className="confirm" role="alertdialog" aria-modal="true" aria-label={title}>
         <h2>{title}</h2>
@@ -167,7 +172,8 @@ export function ConfirmSheet({
           Cancel
         </button>
       </section>
-    </div>
+    </div>,
+    document.body
   )
 }
 

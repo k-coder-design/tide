@@ -75,6 +75,8 @@ describe('Apple Health import (T12, T27)', () => {
     await session.setBackupPassword(PASSWORD)
     const backup = await session.createBackup()
     await expect(session.importHealth(backup, PASSWORD)).rejects.toThrow('not a Tide import file')
+    // export.zip chosen by mistake gets its own hint.
+    await expect(session.importHealth(new Uint8Array([0x50, 0x4b, 0x03, 0x04, ...new Uint8Array(100)]), PASSWORD)).rejects.toThrow('Health export itself')
     const file = await sealHealthImport(await collectHealth(EXPORT), PASSWORD, 1000)
     await expect(session.restoreBackup(file, PASSWORD, 'replace')).rejects.toThrow('not a Tide backup')
   })
