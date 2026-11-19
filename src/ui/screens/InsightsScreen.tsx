@@ -29,10 +29,10 @@ export function InsightsScreen({
     <div className="screen insights">
       <header className="screen-header">
         <h1>Insights</h1>
-        <div className="period-picker">
-          <Segmented label="Period" options={PERIODS} value={period} onChange={(p) => p && onPeriod(p)} />
-        </div>
       </header>
+      <div className="period-picker">
+        <Segmented label="Period" options={PERIODS} value={period} onChange={(p) => p && onPeriod(p)} />
+      </div>
       {error && <p className="error-text">{error}</p>}
       {data && !data.hasData && (
         <section className="card">

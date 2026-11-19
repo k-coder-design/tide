@@ -1430,13 +1430,9 @@ html.covered body::after {
   align-items: center;
 }
 
-.period-picker {
-  width: 236px;
-}
-
+/* A row of its own under the title: three equal parts fit every iPhone width without crowding "Year". */
 .period-picker button {
   white-space: nowrap;
-  font-size: 13px;
 }
 
 .terracotta-bg {
