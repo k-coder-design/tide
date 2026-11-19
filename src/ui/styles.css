@@ -1418,3 +1418,9 @@ html.covered body::after {
   padding: 1px 5px;
   overflow-wrap: anywhere;
 }
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

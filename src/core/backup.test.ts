@@ -117,4 +117,25 @@ describe('backups (phase 4)', () => {
     expect(next.status()).toMatchObject({ enabled: false, locked: false })
     expect(api(next)['today.summary'](TODAY).week.other).toBe(0)
   })
+
+  it('without a password (T28): one tap, restores with no password, and protection can be turned back on', async () => {
+    const { session } = await start()
+    api(session)['checkins.setDesire'](TODAY, 5)
+    await session.persist()
+    await expect(Promise.resolve().then(() => api(session)['backup.setPlain'](false))).rejects.toThrow('Set a backup password first')
+    expect(api(session)['backup.setPlain'](true).plain).toBe(true)
+    const file = await session.createBackup()
+    // Not encrypted: the SQLite image is right there after Tide's header.
+    expect(new TextDecoder().decode(file.slice(5, 20))).toBe('SQLite format 3')
+
+    const other = (await start()).session
+    expect(await other.restoreBackup(file, '', 'replace')).toMatchObject({ days: 1 })
+    expect(api(other)['today.summary'](TODAY).desire).toBe(5)
+
+    // Setting a password turns encryption back on; such a backup then needs the password.
+    expect((await session.setBackupPassword(PASSWORD)).plain).toBe(false)
+    const locked = await session.createBackup()
+    await expect(other.restoreBackup(locked, '', 'replace')).rejects.toThrow('protected by a password')
+    await other.restoreBackup(locked, PASSWORD, 'replace')
+  })
 })

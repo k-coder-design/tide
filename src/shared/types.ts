@@ -86,6 +86,8 @@ export interface Settings {
 /** Backups as the interface sees them (phase 4, T14, T26). */
 export interface BackupStatus {
   passwordSet: boolean
+  /** The user chose backups without a password (T28): the file is not encrypted. */
+  plain: boolean
   /** ISO moment of the last backup that was saved or shared; null — never. */
   lastBackupAt: string | null
   reminder: boolean

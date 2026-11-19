@@ -40,6 +40,8 @@ export interface ApiContract {
   /** After the backup file was saved or shared. */
   'backup.markDone'(): BackupStatus
   'backup.setReminder'(on: boolean): BackupStatus
+  /** Backups without a password (T28). */
+  'backup.setPlain'(on: boolean): BackupStatus
 }
 
 export type ApiMethod = keyof ApiContract
@@ -55,7 +57,8 @@ export const WRITE_METHODS: ReadonlySet<ApiMethod> = new Set<ApiMethod>([
   'partners.setArchived',
   'settings.setTheme',
   'backup.markDone',
-  'backup.setReminder'
+  'backup.setReminder',
+  'backup.setPlain'
 ])
 
 export type ApiHandlers = { [M in ApiMethod]: (...args: Parameters<ApiContract[M]>) => ReturnType<ApiContract[M]> }
@@ -78,7 +81,8 @@ const METHODS: ReadonlySet<string> = new Set<ApiMethod>([
   'settings.setTheme',
   'backup.status',
   'backup.markDone',
-  'backup.setReminder'
+  'backup.setReminder',
+  'backup.setPlain'
 ])
 
 export const isApiMethod = (value: unknown): value is ApiMethod => typeof value === 'string' && METHODS.has(value)

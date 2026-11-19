@@ -13,7 +13,9 @@ const KEY = {
   iterations: 'backup.iterations',
   raw: 'backup.key',
   lastAt: 'backup.last_at',
-  reminder: 'backup.reminder'
+  reminder: 'backup.reminder',
+  /** 'on' — the user chose backups without a password (T28). */
+  plain: 'backup.plain'
 } as const
 
 /**
@@ -27,7 +29,8 @@ export class BackupService {
     const lastBackupAt = this.read(KEY.lastAt)
     const reminder = this.read(KEY.reminder) !== 'off'
     const old = lastBackupAt === null || Date.parse(this.ctx.now()) - Date.parse(lastBackupAt) >= BACKUP_REMINDER_DAYS * DAY_MS
-    return { passwordSet: this.key() !== null, lastBackupAt, reminder, due: reminder && old && this.hasEntries() }
+    const plain = this.read(KEY.plain) === 'on'
+    return { passwordSet: this.key() !== null, plain, lastBackupAt, reminder, due: reminder && old && this.hasEntries() }
   }
 
   key(): BackupKey | null {
@@ -38,8 +41,10 @@ export class BackupService {
     return { salt: fromBase64(salt), raw: fromBase64(raw), iterations }
   }
 
+  /** Setting a password also turns encryption back on. */
   setKey(key: BackupKey): void {
     this.ctx.db.transaction(() => {
+      this.write(KEY.plain, 'off')
       this.write(KEY.salt, toBase64(key.salt))
       this.write(KEY.raw, toBase64(key.raw))
       this.write(KEY.iterations, String(key.iterations))
@@ -49,6 +54,14 @@ export class BackupService {
   /** After the file was saved or shared — not when it was only prepared. */
   markDone(): BackupStatus {
     this.write(KEY.lastAt, this.ctx.now())
+    return this.status()
+  }
+
+  /** Backups without a password (T28). Turning it off needs a password, set or already there. */
+  setPlain(on: boolean): BackupStatus {
+    if (typeof on !== 'boolean') throw new DomainError('VALIDATION', 'Choose on or off')
+    if (!on && this.key() === null) throw new DomainError('VALIDATION', 'Set a backup password first')
+    this.write(KEY.plain, on ? 'on' : 'off')
     return this.status()
   }
 

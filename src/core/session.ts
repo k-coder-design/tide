@@ -22,7 +22,7 @@ import {
   type Bytes,
   type LockRecord
 } from './storage/lock'
-import { checkBackupPassword, deriveBackupKey, openBackup, openHealthFile, sealBackup } from './storage/backup'
+import { checkBackupPassword, deriveBackupKey, openBackup, openHealthFile, plainBackup, sealBackup } from './storage/backup'
 import { StorageError, Vault, type KeyStore, type Opened, type SlotStore } from './storage/vault'
 
 interface OpenJournal {
@@ -177,10 +177,12 @@ export class Session {
     return backups.status()
   }
 
-  /** The whole journal as an encrypted backup file. */
+  /** The whole journal as a backup file: encrypted with the backup password, or as it is when the user chose no password (T28). */
   async createBackup(): Promise<Uint8Array> {
     const journal = this.openJournal()
-    const key = new BackupService(createContext(journal.memory.db)).key()
+    const backups = new BackupService(createContext(journal.memory.db))
+    if (backups.status().plain) return plainBackup(journal.memory.serialize())
+    const key = backups.key()
     if (!key) throw new DomainError('VALIDATION', 'Set a backup password first')
     return sealBackup(key, journal.memory.serialize())
   }

@@ -13,6 +13,8 @@ export const BACKUP_ITERATIONS = 600_000
 export const BACKUP_PASSWORD_MIN = 8
 
 const MAGIC = [0x54, 0x49, 0x44, 0x42] // "TIDB" — a backup
+/** "TIDP" — a backup saved without a password (T28): the header, then the SQLite image as it is. */
+const PLAIN_MAGIC = [0x54, 0x49, 0x44, 0x50]
 /** "TIDH" — an Apple Health import file, written on the Mac by scripts/health-import.mjs in the same layout (T27). */
 export const HEALTH_MAGIC = [0x54, 0x49, 0x44, 0x48]
 const FORMAT = 1
@@ -64,10 +66,27 @@ async function seal(magic: number[], key: BackupKey, plain: Uint8Array): Promise
   return out
 }
 
-/** The journal image inside a backup and the key that opened it; a clear error for another file or a wrong password. */
-export async function openBackup(bytes: Uint8Array, password: string): Promise<{ image: Bytes; key: BackupKey }> {
-  const { plain, key } = await open(MAGIC, bytes, password, 'a Tide backup')
-  return { image: plain, key }
+/** A backup without a password (T28): readable by anyone who has the file. */
+export function plainBackup(image: Uint8Array): Bytes {
+  const out = new Uint8Array(5 + image.byteLength)
+  out.set(PLAIN_MAGIC, 0)
+  out[4] = FORMAT
+  out.set(image, 5)
+  return out
+}
+
+/** The journal image inside a backup — encrypted or saved without a password; a clear error for another file or a wrong password. */
+export async function openBackup(bytes: Uint8Array, password: string): Promise<{ image: Bytes }> {
+  const file = new Uint8Array(bytes)
+  if (file.byteLength > 5 && PLAIN_MAGIC.every((byte, i) => file[i] === byte)) {
+    if (file[4] !== FORMAT) throw new DomainError('VALIDATION', 'This file was made by a newer Tide. Update Tide, then try again.')
+    return { image: file.slice(5) }
+  }
+  if (MAGIC.every((byte, i) => file[i] === byte) && !password) {
+    throw new DomainError('VALIDATION', 'This backup is protected by a password. Enter it to restore.')
+  }
+  const { plain } = await open(MAGIC, file, password, 'a Tide backup')
+  return { image: plain }
 }
 
 /** The JSON inside a Health import file (T27). */

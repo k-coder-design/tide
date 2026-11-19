@@ -10,7 +10,7 @@ const PASSWORD_MIN = 8
 export function BackupSettings({ onRestored }: { onRestored: () => void }) {
   const [version, setVersion] = useState(0)
   const { data: status } = useLoad(() => api('backup.status'), [version])
-  const [open, setOpen] = useState<'backup' | 'password' | 'restore' | 'health' | null>(null)
+  const [open, setOpen] = useState<'backup' | 'password' | 'plain' | 'restore' | 'health' | null>(null)
   const refresh = () => setVersion((v) => v + 1)
   const close = () => {
     setOpen(null)
@@ -27,7 +27,28 @@ export function BackupSettings({ onRestored }: { onRestored: () => void }) {
             <span className="row-sub">{status ? lastBackupText(status) : ' '}</span>
           </span>
         </button>
-        {status?.passwordSet && (
+        <div className="row">
+          <span className="row-text">
+            <span className="row-title">Password protection</span>
+            <span className="row-sub">{status?.plain
+                ? 'Off — anyone with a backup file can read it'
+                : status?.passwordSet
+                  ? 'Backups are encrypted with your password'
+                  : 'On — you choose the password at the first backup'}</span>
+          </span>
+          <Switch
+            label="Password protection"
+            on={!(status?.plain ?? false)}
+            disabled={!status}
+            onChange={() => {
+              if (!status) return
+              if (!status.plain) setOpen('plain')
+              else if (status.passwordSet) void api('backup.setPlain', false).then(refresh)
+              else setOpen('password')
+            }}
+          />
+        </div>
+        {status?.passwordSet && !status.plain && (
           <button type="button" className="row" onClick={() => setOpen('password')}>
             <span className="row-text">
               <span className="row-title">Change backup password</span>
@@ -64,6 +85,7 @@ export function BackupSettings({ onRestored }: { onRestored: () => void }) {
 
       {open === 'backup' && <BackupSheet onClose={close} />}
       {open === 'password' && <PasswordSheet title="Backup password" onClose={close} onDone={close} />}
+      {open === 'plain' && <PlainConfirm onCancel={close} onConfirm={() => void api('backup.setPlain', true).then(close)} />}
       {open === 'health' && <HealthImportSheet onClose={close} onImported={onRestored} />}
       {open === 'restore' && (
         <RestoreSheet
@@ -89,6 +111,8 @@ export function BackupSheet({ onClose }: { onClose: () => void }) {
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
   const [passwordSet, setPasswordSet] = useState(false)
+  const [askPlain, setAskPlain] = useState(false)
+  const [plainChosen, setPlainChosen] = useState(false)
 
   const prepare = async () => {
     setBusy(true)
@@ -120,19 +144,36 @@ export function BackupSheet({ onClose }: { onClose: () => void }) {
     }
   }
 
-  if (status && !status.passwordSet && !passwordSet) {
+  if (status && !status.passwordSet && !status.plain && !passwordSet) {
     return (
-      <PasswordSheet
-        title="Backup password"
-        first
-        onClose={onClose}
-        onDone={() => {
-          setPasswordSet(true)
-          void prepare()
-        }}
-      />
+      <>
+        <PasswordSheet
+          title="Backup password"
+          first
+          onClose={onClose}
+          onDone={() => {
+            setPasswordSet(true)
+            void prepare()
+          }}
+          onWithout={() => setAskPlain(true)}
+        />
+        {askPlain && (
+          <PlainConfirm
+            onCancel={() => setAskPlain(false)}
+            onConfirm={() =>
+              void api('backup.setPlain', true).then(() => {
+                setAskPlain(false)
+                setPlainChosen(true)
+                setPasswordSet(true)
+                void prepare()
+              })
+            }
+          />
+        )}
+      </>
     )
   }
+  const plain = Boolean(status?.plain) || plainChosen
 
   return (
     <Sheet label="Back up" onClose={onClose}>
@@ -154,7 +195,9 @@ export function BackupSheet({ onClose }: { onClose: () => void }) {
               <Icon name="journal" size={22} color="var(--teal)" />
               <span className="row-text">
                 <span className="row-title">{file.name}</span>
-                <span className="row-sub">{sizeText(file.size)} · encrypted with your backup password</span>
+                <span className={`row-sub ${plain ? 'danger-text' : ''}`}>
+                  {sizeText(file.size)} · {plain ? 'not encrypted — keep it private' : 'encrypted with your backup password'}
+                </span>
               </span>
             </div>
             <p className="muted small">In the Share sheet choose Save to Files → On My iPhone, or send it to your Mac.</p>
@@ -165,7 +208,11 @@ export function BackupSheet({ onClose }: { onClose: () => void }) {
           </>
         ) : (
           <>
-            <p className="muted">The whole journal goes into one file, encrypted with your backup password. You need the password to restore it.</p>
+            <p className="muted">
+              {plain
+                ? 'The whole journal goes into one file without a password: anyone who gets the file can read it. Password protection can be turned back on in Settings.'
+                : 'The whole journal goes into one file, encrypted with your backup password. You need the password to restore it.'}
+            </p>
             {error && <p className="error-text">{error}</p>}
             <button type="button" className="button primary push-bottom" disabled={busy || !status} onClick={() => void prepare()}>
               {busy ? 'Preparing…' : 'Make the backup'}
@@ -178,7 +225,20 @@ export function BackupSheet({ onClose }: { onClose: () => void }) {
 }
 
 /** Sets or changes the backup password: twice, with the warning that a lost one cannot be recovered. */
-function PasswordSheet({ title, first = false, onClose, onDone }: { title: string; first?: boolean; onClose: () => void; onDone: (status: BackupStatus) => void }) {
+function PasswordSheet({
+  title,
+  first = false,
+  onClose,
+  onDone,
+  onWithout
+}: {
+  title: string
+  first?: boolean
+  onClose: () => void
+  onDone: (status: BackupStatus) => void
+  /** Offered on the first backup: back up without a password instead (T28). */
+  onWithout?: () => void
+}) {
   const [password, setPassword] = useState('')
   const [repeat, setRepeat] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -229,9 +289,16 @@ function PasswordSheet({ title, first = false, onClose, onDone }: { title: strin
           onChange={(e) => setRepeat(e.target.value)}
         />
         {error && <p className="error-text">{error}</p>}
-        <button type="submit" className="button primary push-bottom" disabled={busy}>
-          {busy ? 'Saving…' : first ? 'Set password and continue' : 'Save password'}
-        </button>
+        <div className="push-bottom stack">
+          <button type="submit" className="button primary" disabled={busy}>
+            {busy ? 'Saving…' : first ? 'Set password and continue' : 'Save password'}
+          </button>
+          {onWithout && (
+            <button type="button" className="button secondary" disabled={busy} onClick={onWithout}>
+              Back up without a password
+            </button>
+          )}
+        </div>
       </form>
     </Sheet>
   )
@@ -307,7 +374,7 @@ function RestoreSheet({ onClose, onRestored }: { onClose: () => void; onRestored
               type="password"
               autoComplete="current-password"
               aria-label="Backup password"
-              placeholder="Backup password"
+              placeholder="Backup password, if it has one"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -322,7 +389,7 @@ function RestoreSheet({ onClose, onRestored }: { onClose: () => void; onRestored
             <button
               type="button"
               className="button primary push-bottom"
-              disabled={!file || !password || busy}
+              disabled={!file || busy}
               onClick={() => (mode === 'replace' ? setConfirming(true) : void restore())}
             >
               {busy ? 'Restoring…' : 'Restore'}
@@ -431,6 +498,19 @@ function HealthImportSheet({ onClose, onImported }: { onClose: () => void; onImp
         )}
       </div>
     </Sheet>
+  )
+}
+
+/** The warning before backups without a password (T28). */
+function PlainConfirm({ onConfirm, onCancel }: { onConfirm: () => void; onCancel: () => void }) {
+  return (
+    <ConfirmSheet
+      title="Back up without a password?"
+      message="Backup files will not be encrypted. Anyone who gets one — from Files, iCloud Drive or your Mac — can read your whole journal. Tide on this iPhone stays encrypted."
+      confirm="Back up without a password"
+      onConfirm={onConfirm}
+      onCancel={onCancel}
+    />
   )
 }
 

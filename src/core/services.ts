@@ -33,6 +33,7 @@ export function createHandlers(ctx: Context): ApiHandlers {
     'settings.setTheme': (theme) => settings.setTheme(theme),
     'backup.status': () => backups.status(),
     'backup.markDone': () => backups.markDone(),
-    'backup.setReminder': (on) => backups.setReminder(on)
+    'backup.setReminder': (on) => backups.setReminder(on),
+    'backup.setPlain': (on) => backups.setPlain(on)
   }
 }
