@@ -21,7 +21,14 @@
   --danger: #a3302a;
   --warn: #85560a;
   --warn-tint: #ecdcc0;
-  --spotting: #e2c7cf;
+  /* Bleeding (T36, "Cherry"): even lightness steps, as soft as the accents; spotting is a red-brown. */
+  --spotting: #aa786f;
+  --flow-light: #f9bcb9;
+  --flow-unspecified: #e48e89;
+  --flow-medium: #cd605a;
+  --flow-heavy: #932b27;
+  --on-flow: #ffffff;
+  --on-flow-pale: #2a1414;
   --on-accent: #ffffff;
   --shadow: 0 1px 2px #16242b26;
   --backdrop: #16242b66;
@@ -50,7 +57,13 @@
     --danger: #f08a80;
     --warn: #e2b766;
     --warn-tint: #3a2f1a;
-    --spotting: #66394a;
+    --spotting: #84554d;
+    --flow-light: #f4b0ad;
+    --flow-unspecified: #e9938e;
+    --flow-medium: #dd766f;
+    --flow-heavy: #b6433c;
+    --on-flow: #ffffff;
+    --on-flow-pale: #2a1414;
     --on-accent: #0e1719;
     --shadow: none;
     --backdrop: #000000a0;
@@ -78,7 +91,13 @@
   --danger: #f08a80;
   --warn: #e2b766;
   --warn-tint: #3a2f1a;
-  --spotting: #66394a;
+  --spotting: #84554d;
+  --flow-light: #f4b0ad;
+  --flow-unspecified: #e9938e;
+  --flow-medium: #dd766f;
+  --flow-heavy: #b6433c;
+  --on-flow: #ffffff;
+  --on-flow-pale: #2a1414;
   --on-accent: #0e1719;
   --shadow: none;
   --backdrop: #000000a0;
@@ -1683,7 +1702,7 @@ html.covered body::after {
 }
 
 .flow-option.on {
-  border-color: var(--berry);
+  border-color: var(--flow-heavy);
 }
 
 .flow-swatch {
@@ -1705,25 +1724,25 @@ html.covered body::after {
 
 .flow-swatch.light,
 .flow-day.light {
-  background: color-mix(in srgb, var(--berry) 40%, var(--surface));
+  background: var(--flow-light);
   border-color: transparent;
 }
 
 .flow-swatch.unspecified,
 .flow-day.unspecified {
-  background: color-mix(in srgb, var(--berry) 55%, var(--surface));
+  background: var(--flow-unspecified);
   border-color: transparent;
 }
 
 .flow-swatch.medium,
 .flow-day.medium {
-  background: color-mix(in srgb, var(--berry) 70%, var(--surface));
+  background: var(--flow-medium);
   border-color: transparent;
 }
 
 .flow-swatch.heavy,
 .flow-day.heavy {
-  background: var(--berry);
+  background: var(--flow-heavy);
   border-color: transparent;
 }
 
@@ -1950,29 +1969,31 @@ html.covered body::after {
 
 .cycle-cell.spotting {
   background: var(--spotting);
+  color: var(--on-flow);
 }
 
 .cycle-cell.light {
-  background: color-mix(in srgb, var(--berry) 40%, var(--surface));
+  background: var(--flow-light);
+  color: var(--on-flow-pale);
 }
 
 .cycle-cell.unspecified {
-  background: color-mix(in srgb, var(--berry) 55%, var(--surface));
-  color: var(--surface);
+  background: var(--flow-unspecified);
+  color: var(--on-flow-pale);
 }
 
 .cycle-cell.medium {
-  background: color-mix(in srgb, var(--berry) 70%, var(--surface));
-  color: var(--surface);
+  background: var(--flow-medium);
+  color: var(--on-flow);
 }
 
 .cycle-cell.heavy {
-  background: var(--berry);
-  color: var(--surface);
+  background: var(--flow-heavy);
+  color: var(--on-flow);
 }
 
 .calendar-cell.starts {
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--berry) 55%, var(--ink));
+  box-shadow: inset 0 0 0 2px var(--ink);
   font-weight: 800;
 }
 
@@ -1982,7 +2003,7 @@ html.covered body::after {
   font-weight: 800;
 }
 
-.cycle-cell.today:not(.medium, .heavy, .unspecified),
+.cycle-cell.today:not(.spotting, .light, .unspecified, .medium, .heavy),
 .desire-cell.today:not(.d4, .d5) {
   color: var(--ink);
 }
@@ -1999,10 +2020,9 @@ html.covered body::after {
   color: var(--muted);
 }
 
-.cycle-cell.medium .cycle-day-no,
-.cycle-cell.heavy .cycle-day-no,
-.cycle-cell.unspecified .cycle-day-no {
-  color: color-mix(in srgb, var(--surface) 80%, transparent);
+.cycle-cell:is(.spotting, .light, .unspecified, .medium, .heavy) .cycle-day-no {
+  color: currentColor;
+  opacity: 0.7;
 }
 
 .legend .cycle-day-no {
@@ -2013,7 +2033,7 @@ html.covered body::after {
   width: 11px;
   height: 11px;
   border-radius: 3px;
-  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--berry) 55%, var(--ink));
+  box-shadow: inset 0 0 0 2px var(--ink);
 }
 
 .episode-row .num small {

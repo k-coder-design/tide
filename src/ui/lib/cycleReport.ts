@@ -23,9 +23,11 @@ const C = {
   line: '#E2DED7',
   soft: '#F4F2EE',
   berry: '#933A57',
-  ring: '#5E1F34',
+  ring: '#16242B',
   teal: '#1B6570',
-  flow: { none: '#F4F2EE', spotting: '#F4E1E7', light: '#E7B3C3', unspecified: '#D894AA', medium: '#C97590', heavy: '#9C3D5C' } as Record<Flow, string>
+  /** The app's light-theme bleeding colours (T36). */
+  flow: { none: '#F4F2EE', spotting: '#AA786F', light: '#F9BCB9', unspecified: '#E48E89', medium: '#CD605A', heavy: '#932B27' } as Record<Flow, string>,
+  onFlowPale: '#2A1414'
 }
 
 /** Draws the report on canvases, one per A4 page, and wraps them in a PDF. Runs on the phone only. */
@@ -202,8 +204,8 @@ function drawCalendar(doc: ReportCanvas, months: CycleMonth[]): void {
         const cy = top + 18 + Math.floor(slot / 7) * cell
         if (d.flow && d.flow !== 'none') doc.rect(cx + 1, cy + 1, cell - 2, cell - 2, C.flow[d.flow], 3)
         if (d.startsCycle) doc.stroke(cx + 1.6, cy + 1.6, cell - 3.2, cell - 3.2, C.ring, 1.2, 3)
-        const dark = d.flow === 'medium' || d.flow === 'heavy' || d.flow === 'unspecified'
-        doc.text(String(k + 1), cx + cell / 2, cy + cell / 2 + 3, { size: 7.5, weight: d.startsCycle ? 800 : 600, color: dark ? '#FFFFFF' : C.ink, align: 'center' })
+        const fg = d.flow === 'medium' || d.flow === 'heavy' || d.flow === 'spotting' ? '#FFFFFF' : d.flow === 'light' || d.flow === 'unspecified' ? C.onFlowPale : C.ink
+        doc.text(String(k + 1), cx + cell / 2, cy + cell / 2 + 3, { size: 7.5, weight: d.startsCycle ? 800 : 600, color: fg, align: 'center' })
       })
     })
     doc.y = top + boxHeight
